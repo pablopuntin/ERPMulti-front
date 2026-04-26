@@ -1,8 +1,14 @@
+"use client";
+
+import { useEffect } from "react";
+import { useRouter } from "next/navigation";
+
 export default function LoginPage() {
-  return (
-    <div style={{ padding: 40 }}>
-      <h1>Login</h1>
-      <p>Esta es la página de login.</p>
-    </div>
-  );
+  const router = useRouter();
+
+  useEffect(() => {
+    router.replace("/");
+  }, [router]);
+
+  return null;
 }

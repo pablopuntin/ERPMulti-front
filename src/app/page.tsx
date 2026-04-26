@@ -4,10 +4,11 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { Input } from "@/app/components/ui/input";
 import { Button } from "@/app/components/ui/button";
-import { authAPI } from "@/services/api";
+import { useAuth } from "@/components/auth/AuthContext";
 
 export default function Home() {
   const router = useRouter();
+  const { login } = useAuth();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
@@ -22,42 +23,12 @@ export default function Home() {
     const password = formData.get("password") as string;
 
     try {
-      // Intentar login real con API
-      const response = await authAPI.login({ email, password });
-      
-      console.log("Login response:", response);
-      
-      // Guardar token en localStorage y cookies
-      if (response.access_token) {
-        localStorage.setItem("token", response.access_token);
-        
-        // También guardar en cookies como respaldo
-        document.cookie = `access_token=${response.access_token}; path=/; max-age=3600; SameSite=Lax`;
-        document.cookie = `token=${response.access_token}; path=/; max-age=3600; SameSite=Lax`;
-        
-        console.log("Token guardado en localStorage:", response.access_token);
-        console.log("Token guardado en cookies:", response.access_token);
-      }
-      
-      if (response.user) {
-        localStorage.setItem("user", JSON.stringify(response.user));
-        console.log("Usuario guardado:", response.user);
-      }
-      
-      // Redirigir al dashboard
-      router.push(response.user?.role === "vendedor" ? "/dashboard/sales" : "/dashboard");
+      await login(email, password);
+      const storedUser = localStorage.getItem("user");
+      const parsedUser = storedUser ? JSON.parse(storedUser) : null;
+      router.push(parsedUser?.role === "vendedor" ? "/dashboard/sales" : "/dashboard");
     } catch (err: any) {
-      console.error("Login error:", err);
-      
-      // Si falla la API, hacer login fake para desarrollo
-      if (err.code === "ERR_NETWORK" || err.code === "ECONNREFUSED") {
-        console.log("Backend no disponible, usando login fake...");
-        setTimeout(() => {
-          router.push("/dashboard");
-        }, 800);
-      } else {
-        setError(err.response?.data?.message || "Error al iniciar sesión");
-      }
+      setError(err?.response?.data?.message || err?.message || "Error al iniciar sesión");
     } finally {
       setLoading(false);
     }
