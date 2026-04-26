@@ -1,0 +1,73 @@
+/* -------------------------------------------------- */
+/* Tailwind base                                       */
+/* -------------------------------------------------- */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* -------------------------------------------------- */
+/* Variables del tema (solo modo oscuro)               */
+/* -------------------------------------------------- */
+:root {
+  /* Fondo general */
+  --background: 240 10% 10%;      /* Gris muy oscuro */
+  --foreground: 0 0% 98%;         /* Blanco suave */
+
+  /* Colores principales */
+  --primary: 262 83% 65%;         /* Violeta moderno */
+  --primary-foreground: 0 0% 100%;/* Blanco */
+
+  --secondary: 240 4% 20%;        /* Gris oscuro */
+  --secondary-foreground: 0 0% 95%;
+
+  --accent: 240 4% 25%;
+  --accent-foreground: 0 0% 100%;
+
+  /* Muted */
+  --muted: 240 4% 30%;
+  --muted-foreground: 0 0% 80%;
+
+  /* Bordes e inputs */
+  --border: 240 4% 25%;
+  --input: 240 4% 30%;
+  --ring: 262 83% 65%;
+
+  /* Destructive (rojo) */
+  --destructive: 0 72% 51%;
+  --destructive-foreground: 0 0% 98%;
+
+  /* Cards */
+  --card: 240 10% 12%;
+  --card-foreground: 0 0% 98%;
+
+  --radius: 0.5rem;
+}
+
+/* -------------------------------------------------- */
+/* Base defaults                                        */
+/* -------------------------------------------------- */
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground antialiased;
+  }
+}
+
+/* -------------------------------------------------- */
+/* Scrollbar (estilo fino y oscuro)                    */
+/* -------------------------------------------------- */
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: hsl(var(--muted));
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: hsl(var(--muted-foreground));
+}
