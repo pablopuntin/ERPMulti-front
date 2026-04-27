@@ -91,6 +91,7 @@ src/
 
 - **`app/dashboard/products/hooks/useProducts.ts`**
   - carga catálogo paginado desde backend
+  - opera por `activeBranchId` para traer solo variantes asignadas comercialmente a la sucursal activa
   - expone `products`, `meta`, `refreshProducts`
 
 - **`app/dashboard/hooks/useDashboardData.ts`**
@@ -176,7 +177,7 @@ Pantallas detectadas actualmente:
 - navegación del dashboard por rol
 - logout visible en topbar
 - catálogo de productos con filtros y acciones masivas
-- importación de productos desde archivo
+- importación de productos desde archivo con confirmación explícita de la sucursal activa destino
 - módulo dedicado de transferencias en `/dashboard/stock`
 - caja con apertura, cierre, movimientos y cola operativa
 - gastos fijos y variables
@@ -254,6 +255,13 @@ Esto ya da una base operativa de trazabilidad, aunque todavía no constituye una
 ---
 
 ## Stock y transferencias
+
+La operación diaria del catálogo y stock se apoya en la **sucursal activa**:
+
+- la lista de productos muestra solo variantes asignadas a esa sucursal
+- la importación masiva asigna variantes a la sucursal activa confirmada por el usuario
+- el stock visible sigue viniendo por ubicación (`branch`, `warehouse`, `transit`)
+- usuarios globales también trabajan por sucursal activa en operación diaria
 
 El módulo `/dashboard/stock` centraliza:
 

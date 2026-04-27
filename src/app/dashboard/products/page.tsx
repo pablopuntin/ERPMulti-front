@@ -80,12 +80,13 @@ export default function ProductsPage() {
   const queryParams = useMemo(() => ({
     page,
     limit: 50,
+    ...(activeBranchId ? { branchId: activeBranchId } : {}),
     ...(debouncedSearchTerm.trim() ? { search: debouncedSearchTerm.trim() } : {}),
     ...(selectedCategory !== "all" ? { categoryId: selectedCategory } : {}),
     ...(selectedBrand !== "all" ? { brandId: selectedBrand } : {}),
     ...(selectedProductBase !== "all" ? { productBaseId: selectedProductBase } : {}),
     ...(selectedVariant !== "all" ? { variantId: selectedVariant } : {}),
-  }), [page, debouncedSearchTerm, selectedCategory, selectedBrand, selectedProductBase, selectedVariant]);
+  }), [page, activeBranchId, debouncedSearchTerm, selectedCategory, selectedBrand, selectedProductBase, selectedVariant]);
 
   const { 
     products,
@@ -111,7 +112,7 @@ export default function ProductsPage() {
         const [categories, brands, productBases, branches] = await Promise.all([
           categoriesAPI.getAll(),
           brandsAPI.getAll(),
-          productsBaseAPI.getAll({ limit: 10000 }),
+          productsBaseAPI.getAll({ limit: 10000, ...(activeBranchId ? { branchId: activeBranchId } : {}) }),
           branchesAPI.getAll(),
         ]);
 
@@ -132,7 +133,7 @@ export default function ProductsPage() {
     };
 
     loadFilterOptions();
-  }, []);
+  }, [activeBranchId]);
 
   const refreshCategoryOptions = async (preferredCategoryId?: string, preferredCategoryName?: string) => {
     try {
@@ -390,6 +391,11 @@ export default function ProductsPage() {
       return;
     }
 
+    if (!activeBranchId) {
+      setImportMessage("Seleccioná una sucursal activa antes de importar productos. La importación asignará las variantes a esa sucursal.");
+      return;
+    }
+
     setImportLoading(true);
     setImportMessage(null);
 
@@ -407,6 +413,11 @@ export default function ProductsPage() {
   const handleConfirmImport = async () => {
     if (!importFile) {
       setImportMessage("Seleccioná un archivo Excel para importar.");
+      return;
+    }
+
+    if (!activeBranchId) {
+      setImportMessage("Seleccioná una sucursal activa antes de importar productos. La importación asignará las variantes a esa sucursal.");
       return;
     }
 
@@ -509,7 +520,9 @@ export default function ProductsPage() {
             Gestión de Productos
           </h1>
           <p className="text-muted-foreground mt-1">
-            Administra tu catálogo de productos ({meta.total.toLocaleString()} variantes)
+            {activeBranchId
+              ? `Administrá el catálogo asignado a ${activeBranchName} (${meta.total.toLocaleString()} variantes).`
+              : `Seleccioná una sucursal activa para operar productos (${meta.total.toLocaleString()} variantes visibles).`}
           </p>
         </div>
         <div className="mt-4 sm:mt-0 flex gap-2">
@@ -973,6 +986,7 @@ export default function ProductsPage() {
             <Input
               type="file"
               accept=".xlsx,.xls"
+              disabled={!activeBranchId}
               onChange={(e) => {
                 const nextFile = e.target.files?.[0] || null;
                 setImportFile(nextFile);
@@ -980,6 +994,13 @@ export default function ProductsPage() {
                 setImportMessage(null);
               }}
             />
+
+            <div className="rounded-lg border border-border bg-muted/30 px-3 py-2 text-sm text-foreground">
+              <strong>Sucursal destino:</strong> {activeBranchId ? activeBranchName : 'Seleccionar sucursal activa en la barra superior'}
+              <div className="text-xs text-muted-foreground mt-1">
+                Al confirmar, las variantes importadas quedarán asignadas comercialmente a esta sucursal.
+              </div>
+            </div>
 
             {importPreview?.summary && (
               <div className="border border-border rounded-lg p-4 space-y-2 text-sm">
@@ -991,6 +1012,7 @@ export default function ProductsPage() {
                 <div><strong>Productos base a crear:</strong> {importPreview.summary.createProductBases}</div>
                 <div><strong>Variantes a crear:</strong> {importPreview.summary.createVariants}</div>
                 <div><strong>Variantes a actualizar:</strong> {importPreview.summary.updateVariants}</div>
+                <div><strong>Sucursal asignada:</strong> {importPreview.summary.assignedBranchName || activeBranchName}</div>
               </div>
             )}
 
@@ -1015,10 +1037,10 @@ export default function ProductsPage() {
           <Button variant="outline" onClick={() => setImportDialogOpen(false)}>
             Cerrar
           </Button>
-          <Button variant="outline" onClick={handlePreviewImport} disabled={importLoading || !importFile}>
+          <Button variant="outline" onClick={handlePreviewImport} disabled={importLoading || !importFile || !activeBranchId}>
             {importLoading ? 'Procesando...' : 'Preview'}
           </Button>
-          <Button onClick={handleConfirmImport} disabled={importLoading || !importFile || !importPreview || importPreview?.errors?.length > 0}>
+          <Button onClick={handleConfirmImport} disabled={importLoading || !importFile || !importPreview || importPreview?.errors?.length > 0 || !activeBranchId}>
             {importLoading ? 'Importando...' : 'Importar'}
           </Button>
         </DialogActions>

@@ -2,6 +2,40 @@ import axios from 'axios';
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000/api';
 
+const getApiErrorMessage = (error: any) => {
+  if (!axios.isAxiosError(error)) {
+    return error?.message || 'Ocurrió un error inesperado. Intentá nuevamente.';
+  }
+
+  if (error.code === 'ECONNABORTED' || String(error.message || '').includes('timeout')) {
+    return 'La operación tardó demasiado en responder. Probá reintentar en unos segundos o recargar la página.';
+  }
+
+  if (!error.response) {
+    return 'No se pudo conectar con el servidor. Verificá tu conexión e intentá nuevamente.';
+  }
+
+  if (error.response.status === 401) {
+    return 'Tu sesión venció o no es válida. Iniciá sesión nuevamente.';
+  }
+
+  if (error.response.status >= 500) {
+    return 'El servidor tuvo un problema al procesar la solicitud. Probá nuevamente en unos instantes.';
+  }
+
+  const backendMessage = error.response?.data?.message;
+
+  if (Array.isArray(backendMessage)) {
+    return backendMessage.join(', ');
+  }
+
+  if (typeof backendMessage === 'string' && backendMessage.trim()) {
+    return backendMessage;
+  }
+
+  return error.message || 'No se pudo completar la operación. Intentá nuevamente.';
+};
+
 const api = axios.create({
   baseURL: API_BASE_URL,
   timeout: 10000,
@@ -41,6 +75,7 @@ api.interceptors.response.use(
   (response) => response,
   (error) => {
     console.error('API Error:', error.response?.data || error.message);
+    error.message = getApiErrorMessage(error);
     return Promise.reject(error);
   }
 );

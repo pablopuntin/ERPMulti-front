@@ -49,6 +49,7 @@ export interface ProductVariant {
   brand?: ProductRelation;
   stockByBranch?: StockByBranch[];
   totalStock?: number;
+  assignedBranchIds?: string[];
 }
 
 export interface ProductsCatalogMeta {

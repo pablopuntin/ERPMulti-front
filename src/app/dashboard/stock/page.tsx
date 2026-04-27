@@ -5,6 +5,7 @@ import { ArrowRightLeft, History, Package, RefreshCw, Truck } from "lucide-react
 import { Button } from "@/app/components/ui/button";
 import { Input } from "@/app/components/ui/input";
 import { productsAPI, stockAPI } from "@/services/api";
+import { useAuth } from "@/components/auth/AuthContext";
 
 type BranchOption = {
   id: string;
@@ -57,6 +58,7 @@ type TransferHistoryItem = {
 type ViewMode = "stock" | "transit" | "history";
 
 export default function StockPage() {
+  const { user } = useAuth();
   const [variants, setVariants] = useState<VariantOption[]>([]);
   const [branches, setBranches] = useState<BranchOption[]>([]);
   const [transferHistory, setTransferHistory] = useState<TransferHistoryItem[]>([]);
@@ -78,6 +80,7 @@ export default function StockPage() {
     quantity: "1",
     reason: "",
   });
+  const activeBranchId = user?.activeBranchId || user?.branchId || "";
 
   const selectedVariant = useMemo(
     () => variants.find((variant) => variant.id === transferForm.variantId) || null,
@@ -229,7 +232,7 @@ export default function StockPage() {
       setLoading(true);
       try {
         const [catalog, transfers] = await Promise.all([
-          productsAPI.getCatalog({ page: 1, limit: 100 }),
+          productsAPI.getCatalog({ page: 1, limit: 100, ...(activeBranchId ? { branchId: activeBranchId } : {}) }),
           stockAPI.getTransfers(),
         ]);
 
@@ -258,7 +261,7 @@ export default function StockPage() {
     };
 
     loadData();
-  }, []);
+  }, [activeBranchId]);
 
   useEffect(() => {
     if (!transferForm.variantId && variants.length > 0) {
@@ -322,7 +325,7 @@ export default function StockPage() {
       }));
 
       const [catalog, transfers] = await Promise.all([
-        productsAPI.getCatalog({ page: 1, limit: 100 }),
+        productsAPI.getCatalog({ page: 1, limit: 100, ...(activeBranchId ? { branchId: activeBranchId } : {}) }),
         stockAPI.getTransfers(),
       ]);
 

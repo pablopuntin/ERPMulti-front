@@ -701,6 +701,12 @@ function NewProductContent() {
         </Alert>
       )}
 
+      <Alert className="mb-4 border-blue-200 bg-blue-50">
+        <AlertDescription className="text-blue-900">
+          La sucursal activa es <strong>{resolvePreferredBranch(branches, getActiveBranchId())?.name || 'no definida'}</strong>. Las variantes nuevas se asignarán automáticamente a esa sucursal.
+        </AlertDescription>
+      </Alert>
+
       {/* Búsqueda de Producto Existente */}
       <Card className="mb-6">
         <CardHeader>
