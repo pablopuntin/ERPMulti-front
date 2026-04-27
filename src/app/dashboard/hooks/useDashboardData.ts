@@ -1,6 +1,15 @@
 import { useState, useEffect } from 'react';
 import { cashAPI, ordersAPI, reportsAPI } from '@/services/api';
 
+const withFallback = async <T,>(request: Promise<T>, fallback: T): Promise<T> => {
+  try {
+    return await request;
+  } catch (error) {
+    console.error('Dashboard fallback activated:', error);
+    return fallback;
+  }
+};
+
 export interface DashboardKPI {
   title: string;
   value: string | number;
@@ -61,7 +70,7 @@ export const useDashboardData = (branchId?: string, enabled = true) => {
       const [dailySummary, cashMovements, stockSummary, currentRegister, pendingDeliveries] = await Promise.all([
         reportsAPI.getDailySummary(undefined, branchId),
         reportsAPI.getCashMovements({ from: today, branchId }),
-        reportsAPI.getStockSummary({ order: 'desc' }),
+        withFallback(reportsAPI.getStockSummary({ order: 'desc', branchId }), []),
         cashAPI.getCurrentRegister(branchId),
         ordersAPI.getPendingDeliveries(branchId ? { branchId } : undefined),
       ]);

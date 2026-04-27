@@ -583,7 +583,11 @@ export const reportsAPI = {
     return response.data;
   },
   
-  getStockSummary: async (params?: { search?: string; order?: 'asc' | 'desc' }) => {
+  getStockSummary: async (params?: {
+    search?: string;
+    order?: 'asc' | 'desc';
+    branchId?: string;
+  }) => {
     const response = await api.get('/reports/stock', { params });
     return response.data;
   }
