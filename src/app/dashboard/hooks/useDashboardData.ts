@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { cashAPI, ordersAPI, reportsAPI } from '@/services/api';
 
 const withFallback = async <T,>(request: Promise<T>, fallback: T): Promise<T> => {
@@ -48,8 +48,45 @@ export const useDashboardData = (branchId?: string, enabled = true) => {
   const [operationalAlerts, setOperationalAlerts] = useState<OperationalAlertItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const requestIdRef = useRef(0);
+
+  const buildOperationalAlerts = (
+    noStockCount: number,
+    lowStockCount: number,
+    pendingDeliveriesCount: number
+  ): OperationalAlertItem[] => [
+    {
+      id: 'no-stock',
+      title: 'Productos sin stock',
+      description: noStockCount > 0
+        ? `${noStockCount} producto(s) están sin stock y requieren revisión.`
+        : 'No hay productos totalmente agotados en este momento.',
+      severity: noStockCount > 0 ? 'high' : 'low',
+      count: noStockCount,
+    },
+    {
+      id: 'low-stock',
+      title: 'Productos con stock bajo',
+      description: lowStockCount > 0
+        ? `${lowStockCount} producto(s) quedaron con stock por debajo del mínimo operativo.`
+        : 'No hay productos con stock bajo para revisar ahora.',
+      severity: lowStockCount > 0 ? 'medium' : 'low',
+      count: lowStockCount,
+    },
+    {
+      id: 'pending-deliveries',
+      title: 'Remitos con entrega pendiente',
+      description: pendingDeliveriesCount > 0
+        ? `${pendingDeliveriesCount} remito(s) todavía tienen entregas pendientes.`
+        : 'No hay remitos con entregas pendientes.',
+      severity: pendingDeliveriesCount > 0 ? 'medium' : 'low',
+      count: pendingDeliveriesCount,
+    },
+  ];
 
   const loadDashboardData = async () => {
+    const requestId = ++requestIdRef.current;
+
     if (!enabled || !branchId) {
       setKpis([]);
       setSalesData([]);
@@ -66,14 +103,16 @@ export const useDashboardData = (branchId?: string, enabled = true) => {
 
       const today = new Date().toISOString().split('T')[0];
 
-      // Cargar datos reales del backend usando endpoints de reports
-      const [dailySummary, cashMovements, stockSummary, currentRegister, pendingDeliveries] = await Promise.all([
+      const [dailySummary, cashMovements, currentRegister, pendingDeliveries] = await Promise.all([
         reportsAPI.getDailySummary(undefined, branchId),
         reportsAPI.getCashMovements({ from: today, branchId }),
-        withFallback(reportsAPI.getStockSummary({ order: 'desc', branchId }), []),
         cashAPI.getCurrentRegister(branchId),
         ordersAPI.getPendingDeliveries(branchId ? { branchId } : undefined),
       ]);
+
+      if (requestId !== requestIdRef.current) {
+        return;
+      }
 
       const incomeMovements = Array.isArray(cashMovements)
         ? cashMovements.filter((movement: any) => movement.type === 'income')
@@ -83,14 +122,6 @@ export const useDashboardData = (branchId?: string, enabled = true) => {
         : [];
       const totalIncome = incomeMovements.reduce((sum: number, movement: any) => sum + Number(movement.amount || 0), 0);
       const totalExpense = expenseMovements.reduce((sum: number, movement: any) => sum + Number(movement.amount || 0), 0);
-
-      const stockItems = Array.isArray(stockSummary) ? stockSummary : [];
-      const noStockCount = stockItems.filter((item: any) => Number(item.totalStock || 0) <= 0).length;
-      const lowStockCount = stockItems.filter((item: any) => {
-        const totalStock = Number(item.totalStock || 0);
-        return totalStock > 0 && totalStock < 10;
-      }).length;
-      const criticalStockCount = noStockCount + lowStockCount;
 
       const pendingDeliveryOrders = Array.isArray(pendingDeliveries) ? pendingDeliveries : [];
       const registerMovements = Array.isArray(currentRegister?.movements)
@@ -124,8 +155,8 @@ export const useDashboardData = (branchId?: string, enabled = true) => {
         },
         {
           title: "Stock crítico",
-          value: criticalStockCount,
-          description: `${noStockCount} sin stock\n${lowStockCount} bajos`
+          value: '...',
+          description: 'Calculando stock crítico...'
         },
         {
           title: "Pendientes de entrega",
@@ -165,44 +196,50 @@ export const useDashboardData = (branchId?: string, enabled = true) => {
       }));
 
       setRecentActivity(processedActivity);
+      setOperationalAlerts(buildOperationalAlerts(0, 0, pendingDeliveryOrders.length));
+      setLoading(false);
 
-      const processedAlerts: OperationalAlertItem[] = [
-        {
-          id: 'no-stock',
-          title: 'Productos sin stock',
-          description: noStockCount > 0
-            ? `${noStockCount} producto(s) están sin stock y requieren revisión.`
-            : 'No hay productos totalmente agotados en este momento.',
-          severity: noStockCount > 0 ? 'high' : 'low',
-          count: noStockCount,
-        },
-        {
-          id: 'low-stock',
-          title: 'Productos con stock bajo',
-          description: lowStockCount > 0
-            ? `${lowStockCount} producto(s) quedaron con stock por debajo del mínimo operativo.`
-            : 'No hay productos con stock bajo para revisar ahora.',
-          severity: lowStockCount > 0 ? 'medium' : 'low',
-          count: lowStockCount,
-        },
-        {
-          id: 'pending-deliveries',
-          title: 'Remitos con entrega pendiente',
-          description: pendingDeliveryOrders.length > 0
-            ? `${pendingDeliveryOrders.length} remito(s) todavía tienen entregas pendientes.`
-            : 'No hay remitos con entregas pendientes.',
-          severity: pendingDeliveryOrders.length > 0 ? 'medium' : 'low',
-          count: pendingDeliveryOrders.length,
-        },
-      ];
+      withFallback(reportsAPI.getStockSummary({ order: 'desc', branchId }), []).then((stockSummary) => {
+        if (requestId !== requestIdRef.current) {
+          return;
+        }
 
-      setOperationalAlerts(processedAlerts);
+        const stockItems = Array.isArray(stockSummary) ? stockSummary : [];
+        const noStockCount = stockItems.filter((item: any) => Number(item.totalStock || 0) <= 0).length;
+        const lowStockCount = stockItems.filter((item: any) => {
+          const totalStock = Number(item.totalStock || 0);
+          return totalStock > 0 && totalStock < 10;
+        }).length;
+        const criticalStockCount = noStockCount + lowStockCount;
+
+        setKpis((currentKpis) =>
+          currentKpis.map((kpi) =>
+            kpi.title === 'Stock crítico'
+              ? {
+                  ...kpi,
+                  value: criticalStockCount,
+                  description: `${noStockCount} sin stock\n${lowStockCount} bajos`
+                }
+              : kpi
+          )
+        );
+
+        setOperationalAlerts(
+          buildOperationalAlerts(noStockCount, lowStockCount, pendingDeliveryOrders.length)
+        );
+      });
 
     } catch (err: any) {
+      if (requestId !== requestIdRef.current) {
+        return;
+      }
+
       console.error('Error loading dashboard data:', err);
       setError('Error al cargar los datos del dashboard');
     } finally {
-      setLoading(false);
+      if (requestId === requestIdRef.current) {
+        setLoading(false);
+      }
     }
   };
 
