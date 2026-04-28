@@ -27,7 +27,7 @@ interface ProductVariant {
   purchasePrice?: number;
   sku?: string; // SKU autogenerado
   minStock?: number;
-  stocks: StockLocation[]; // 🔄 Nuevo: stocks múltiples obligatorio
+  stocks: StockLocation[];
 }
 
 interface StockLocation {
@@ -125,6 +125,8 @@ function NewProductContent() {
     const userData = JSON.parse(localStorage.getItem('user') || '{}');
     return userData.activeBranchId || userData.branchId || null;
   };
+
+  const preferredBranch = resolvePreferredBranch(branches, getActiveBranchId());
 
   useEffect(() => {
     loadReferenceData();
@@ -386,31 +388,6 @@ function NewProductContent() {
     }));
   };
 
-  // Funciones para manejo de stocks múltiples
-  const addStock = (variantId: number) => {
-    setFormData(prev => ({
-      ...prev,
-      variants: prev.variants.map(v => 
-        v.id === variantId 
-          ? { 
-              ...v, 
-              stocks: [
-                ...(v.stocks || []),
-                {
-                  id: Date.now().toString(),
-                  branchId: '',
-                  branchName: '',
-                  quantity: 0,
-                  locationType: 'branch' as const,
-                  minStock: v.minStock || 5
-                }
-              ]
-            }
-          : v
-      )
-    }));
-  };
-
   const updateStock = (variantId: number, stockId: string, field: keyof StockLocation, value: any) => {
     setFormData(prev => ({
       ...prev,
@@ -421,20 +398,6 @@ function NewProductContent() {
               stocks: v.stocks?.map(s =>
                 s.id === stockId ? { ...s, [field]: value } : s
               ) || []
-            }
-          : v
-      )
-    }));
-  };
-
-  const removeStock = (variantId: number, stockId: string) => {
-    setFormData(prev => ({
-      ...prev,
-      variants: prev.variants.map(v => 
-        v.id === variantId
-          ? {
-              ...v,
-              stocks: v.stocks?.filter(s => s.id !== stockId) || []
             }
           : v
       )
@@ -704,6 +667,12 @@ function NewProductContent() {
       <Alert className="mb-4 border-blue-200 bg-blue-50">
         <AlertDescription className="text-blue-900">
           La sucursal activa es <strong>{resolvePreferredBranch(branches, getActiveBranchId())?.name || 'no definida'}</strong>. Las variantes nuevas se asignarán automáticamente a esa sucursal.
+        </AlertDescription>
+      </Alert>
+
+      <Alert className="mb-4 border-slate-200 bg-slate-50">
+        <AlertDescription className="text-slate-900">
+          El stock inicial de cada variante se creará sobre la sucursal activa. Si después necesitás replicar el producto en otra sucursal, podés usar la exportación CSV desde Productos y luego hacer una carga masiva desde la otra sucursal activa.
         </AlertDescription>
       </Alert>
 
@@ -1000,45 +969,19 @@ function NewProductContent() {
                   </div>
                 </div>
 
-                {/* 📦 Stocks Múltiples */}
+                {/* 📦 Stock Inicial */}
                 <div className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <Label className="text-sm font-medium text-gray-700">
-                      📦 Stocks por Ubicación
-                    </Label>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={() => addStock(variant.id)}
-                      disabled={editingVariant !== variant.id}
-                    >
-                      <Plus className="h-4 w-4 mr-1" />
-                      Agregar Ubicación
-                    </Button>
-                  </div>
+                  <Label className="text-sm font-medium text-gray-700">
+                    📦 Stock Inicial
+                  </Label>
 
-                  {variant.stocks!.map((stock, index) => (
+                  {variant.stocks!.slice(0, 1).map((stock) => (
                     <div key={stock.id} className="flex gap-4 mb-4">
                       <div className="flex-1">
-                        <Label>Sucursal</Label>
-                        <select
-                          value={stock.branchId || ''}
-                          onChange={(e) => {
-                            const selectedBranch = branches.find(b => b.id === e.target.value);
-                            updateStock(variant.id, stock.id, 'branchId', e.target.value);
-                            updateStock(variant.id, stock.id, 'branchName', selectedBranch?.name || '');
-                          }}
-                          className="flex h-10 w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900"
-                          disabled={editingVariant !== variant.id}
-                        >
-                          <option value="">Seleccionar sucursal</option>
-                          {branches?.map((branch) => (
-                            <option key={branch.id} value={branch.id}>
-                              {branch.name}
-                            </option>
-                          ))}
-                        </select>
+                        <Label>Sucursal activa</Label>
+                        <div className="flex h-10 w-full items-center rounded-md border border-gray-300 bg-gray-100 px-3 py-2 text-sm text-gray-900">
+                          {preferredBranch?.name || 'Seleccionar sucursal activa'}
+                        </div>
                       </div>
 
                       <div className="flex-1">
@@ -1046,9 +989,10 @@ function NewProductContent() {
                         <Input
                           type="number"
                           value={stock.quantity}
-                          onChange={(e) => updateStock(variant.id, stock.id, 'quantity', parseInt(e.target.value))}
+                          onChange={(e) => updateStock(variant.id, stock.id, 'quantity', parseInt(e.target.value) || 0)}
                           placeholder="📊 0 (unidades disponibles)"
                           className="bg-white text-gray-900"
+                          disabled={editingVariant !== variant.id}
                         />
                       </div>
 
@@ -1058,27 +1002,17 @@ function NewProductContent() {
                           type="number"
                           value={stock.minStock || ''}
                           onChange={(e) => updateStock(variant.id, stock.id, 'minStock', parseInt(e.target.value) || undefined)}
-                          placeholder="⚠️ 5 (alerta por sucursal)"
+                          placeholder="⚠️ 5 (alerta en sucursal activa)"
                           className="bg-white text-gray-900"
+                          disabled={editingVariant !== variant.id}
                         />
                       </div>
-
-                      {variant.stocks!.length > 1 && (
-                        <Button
-                          type="button"
-                          variant="destructive"
-                          size="sm"
-                          onClick={() => removeStock(variant.id, stock.id)}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      )}
                     </div>
                   ))}
 
                   {(!variant.stocks || variant.stocks.length === 0) && (
                     <div className="text-center py-4 text-gray-500 text-sm">
-                      No hay ubicaciones de stock configuradas
+                      No hay stock inicial configurado
                     </div>
                   )}
                 </div>

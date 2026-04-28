@@ -214,11 +214,30 @@ export default function ProductsPage() {
     setPage(1);
   };
 
-  const canImportMassively = user?.role === "root" || user?.role === "gerente_general";
+  const canImportMassively = user?.role === "root" || user?.role === "gerente_general" || user?.role === "gerente_sucursal";
   const activeBranchName = useMemo(
     () => branchOptions.find((branch) => branch.id === activeBranchId)?.name || "Sucursal activa",
     [branchOptions, activeBranchId],
   );
+
+  const handleExportImportTemplate = async () => {
+    try {
+      const blob = await productsBaseAPI.exportImportTemplateCsv(
+        activeBranchId ? { branchId: activeBranchId } : undefined
+      );
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `productos-import-${activeBranchName.replace(/\s+/g, '-').toLowerCase()}.csv`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+      setImportMessage('CSV exportado correctamente. Podés editarlo en Excel y reimportarlo desde otra sucursal activa.');
+    } catch (exportError: any) {
+      setImportMessage(exportError?.response?.data?.message || 'No se pudo exportar el CSV de productos.');
+    }
+  };
   const requiresGlobalBranchSelection = canAccessAllBranches() && !activeBranchId;
   const resolvedBulkStockBranchId = bulkStockLocationType === "branch" ? activeBranchId : bulkStockBranchId;
   const resolvedBulkStockLocationName = branchOptions.find((branch) => branch.id === resolvedBulkStockBranchId)?.name
@@ -526,6 +545,13 @@ export default function ProductsPage() {
           </p>
         </div>
         <div className="mt-4 sm:mt-0 flex gap-2">
+          <Button
+            variant="outline"
+            onClick={handleExportImportTemplate}
+            disabled={!activeBranchId}
+          >
+            Exportar CSV
+          </Button>
           <Button
             variant="outline"
             onClick={() => {
@@ -1001,6 +1027,12 @@ export default function ProductsPage() {
                 Al confirmar, las variantes importadas quedarán asignadas comercialmente a esta sucursal.
               </div>
             </div>
+
+            {canImportMassively && (
+              <div className="rounded-lg border border-border bg-muted/20 px-3 py-2 text-xs text-muted-foreground">
+                <strong>gerente_sucursal</strong>, <strong>gerente_general</strong> y <strong>root</strong> pueden usar esta carga masiva para replicar catálogo o stock desde un CSV exportado de otra sucursal, siempre respetando la sucursal activa.
+              </div>
+            )}
 
             {importPreview?.summary && (
               <div className="border border-border rounded-lg p-4 space-y-2 text-sm">

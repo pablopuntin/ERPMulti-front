@@ -169,6 +169,14 @@ export const productsBaseAPI = {
     const response = await api.get('/products-base', { params });
     return response.data;
   },
+
+  exportImportTemplateCsv: async (params?: any) => {
+    const response = await api.get('/products-base/export/import-template.csv', {
+      params,
+      responseType: 'blob'
+    });
+    return response.data;
+  },
   
   getById: async (id: string) => {
     const response = await api.get(`/products-base/${id}`);

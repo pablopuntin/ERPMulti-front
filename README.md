@@ -178,6 +178,7 @@ Pantallas detectadas actualmente:
 - logout visible en topbar
 - catálogo de productos con filtros y acciones masivas
 - importación de productos desde archivo con confirmación explícita de la sucursal activa destino
+- exportación CSV de productos en formato reutilizable para reimportar desde otra sucursal activa
 - módulo dedicado de transferencias en `/dashboard/stock`
 - caja con apertura, cierre, movimientos y cola operativa
 - gastos fijos y variables
@@ -259,7 +260,9 @@ Esto ya da una base operativa de trazabilidad, aunque todavía no constituye una
 La operación diaria del catálogo y stock se apoya en la **sucursal activa**:
 
 - la lista de productos muestra solo variantes asignadas a esa sucursal
+- la alta manual crea stock inicial solo sobre la sucursal activa
 - la importación masiva asigna variantes a la sucursal activa confirmada por el usuario
+- `gerente_sucursal` también puede exportar e importar CSV dentro de su sucursal activa
 - el stock visible sigue viniendo por ubicación (`branch`, `warehouse`, `transit`)
 - usuarios globales también trabajan por sucursal activa en operación diaria
 
