@@ -56,7 +56,7 @@ export default function Sidebar({
             <SidebarItem href="/dashboard/sales" icon={ShoppingCart} label="Ventas" open={!compactDesktop} />
           ) : cashier ? (
             <>
-              <SidebarItem href="/dashboard/categories" icon={Folder} label="Clientes" open={!compactDesktop} />
+              <SidebarItem href="/dashboard/customers" icon={Folder} label="Clientes" open={!compactDesktop} />
               <SidebarItem href="/dashboard" icon={Home} label="Inicio" open={!compactDesktop} />
               <SidebarItem href="/dashboard/stock" icon={ArrowRightLeft} label="Transferencias" open={!compactDesktop} />
               <SidebarItem href="/dashboard/sales" icon={ShoppingCart} label="Ventas" open={!compactDesktop} />
@@ -64,7 +64,7 @@ export default function Sidebar({
             </>
           ) : (
             <>
-              <SidebarItem href="/dashboard/categories" icon={Folder} label="Clientes" open={!compactDesktop} />
+              <SidebarItem href="/dashboard/customers" icon={Folder} label="Clientes" open={!compactDesktop} />
               <SidebarItem href="/dashboard" icon={Home} label="Inicio" open={!compactDesktop} />
               <SidebarItem href="/dashboard/products" icon={Box} label="Productos" open={!compactDesktop} />
               <SidebarItem href="/dashboard/stock" icon={ArrowRightLeft} label="Transferencias" open={!compactDesktop} />

@@ -38,7 +38,7 @@ export default async function BrandProductsPage({
         {productsBase.map((product: any) => (
           <Link
             key={product.id}
-            href={`/dashboard/categories/${params.categoryId}/brands/${params.brandId}/products/${product.id}`}
+            href={`/categories/${params.categoryId}/brands/${params.brandId}/products/${product.id}`}
             className="bg-white border rounded-xl p-3 shadow-sm hover:shadow-md transition"
           >
             <img

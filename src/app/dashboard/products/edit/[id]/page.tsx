@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useParams, useRouter } from "next/navigation";
+import CategoryModal from "@/app/components/categories/CategoryModal";
 import { ArrowLeft, Plus, Trash2, Search } from "lucide-react";
 import { Button } from "@/app/components/ui/button";
 import { Input } from "@/app/components/ui/input";
@@ -10,7 +11,6 @@ import { Label } from "@/app/components/ui/label";
 import { Textarea } from "@/app/components/ui/textarea";
 import { Alert, AlertDescription } from "@/app/components/ui/alert";
 import { Badge } from "@/app/components/ui/badge";
-import CategoryModal from "@/app/dashboard/categories/CategoryModal";
 
 interface ProductBase {
   id?: string;

@@ -2,9 +2,9 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import CategoryModal from "@/app/components/categories/CategoryModal";
+import { CategoryTable } from "@/app/components/categories/CategoryTable";
 import { Button } from "@/app/components/ui/button";
-import { CategoryTable } from "../dashboard/categories/CategoryTable";
-import CategoryModal from "../dashboard/categories/CategoryModal";
 import { categoriesService } from "@/services/categoriesServices";
 
 export default function CategoriesPage() {

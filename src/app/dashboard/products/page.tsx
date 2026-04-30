@@ -19,7 +19,7 @@ import { useProducts } from "./hooks/useProducts";
 import { StockDisplay } from "@/components/products/StockDisplay";
 import { Dialog, DialogTitle, DialogContent, DialogActions } from "@mui/material";
 import { branchesAPI, brandsAPI, categoriesAPI, productsAPI, productsBaseAPI } from "@/services/api";
-import CategoryModal from "@/app/dashboard/categories/CategoryModal";
+import CategoryModal from "@/app/components/categories/CategoryModal";
 
 type FilterOption = {
   id: string;
