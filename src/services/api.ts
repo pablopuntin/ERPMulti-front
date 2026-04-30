@@ -38,7 +38,7 @@ const getApiErrorMessage = (error: any) => {
 
 const api = axios.create({
   baseURL: API_BASE_URL,
-  timeout: 10000,
+  timeout: 20000,
   withCredentials: true, // ⭐ Importante: enviar cookies automáticamente
   headers: {
     'Content-Type': 'application/json',
@@ -333,17 +333,23 @@ export const ordersAPI = {
   },
 
   finalizeInCash: async (id: string, data: any) => {
-    const response = await api.post(`/orders/${id}/finalize`, data);
+    const response = await api.post(`/orders/${id}/finalize`, data, {
+      timeout: 45000,
+    });
     return response.data;
   },
 
   getRemitoPdf: async (id: string) => {
-    const response = await api.get(`/orders/${id}/remito-pdf`);
+    const response = await api.get(`/orders/${id}/remito-pdf`, {
+      timeout: 45000,
+    });
     return response.data;
   },
 
   getDeliveryEventRemitoPdf: async (id: string, deliveryEventId: string) => {
-    const response = await api.get(`/orders/${id}/delivery-events/${deliveryEventId}/remito-pdf`);
+    const response = await api.get(`/orders/${id}/delivery-events/${deliveryEventId}/remito-pdf`, {
+      timeout: 45000,
+    });
     return response.data;
   },
 
