@@ -45,36 +45,21 @@ const api = axios.create({
   },
 });
 
-// Interceptor para agregar token de autenticación
 api.interceptors.request.use((config) => {
-  console.log('🔍 [API] Request interceptada:', {
-    url: config.url,
-    method: config.method,
-    headers: config.headers
-  });
-  
   const storedUser = localStorage.getItem('user');
   const parsedUser = storedUser ? JSON.parse(storedUser) : null;
   const token = localStorage.getItem('token') || parsedUser?.token;
-  console.log('🔍 [API] Token en localStorage:', !!token);
-  
+
   if (token) {
-    // Enviar en headers (forma principal)
     config.headers.Authorization = `Bearer ${token}`;
-    console.log("🔑 [API] Enviando token en headers:", config.headers.Authorization);
-  } else {
-    console.log("❌ [API] No hay token disponible");
   }
-  
-  console.log('🔍 [API] Headers finales:', config.headers);
+
   return config;
 });
 
-// Interceptor para manejar errores
 api.interceptors.response.use(
   (response) => response,
   (error) => {
-    console.error('API Error:', error.response?.data || error.message);
     error.message = getApiErrorMessage(error);
     return Promise.reject(error);
   }
