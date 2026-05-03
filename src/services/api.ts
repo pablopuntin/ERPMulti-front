@@ -365,33 +365,40 @@ export const customersAPI = {
     return response.data;
   },
 
-  getCreditSummary: async (id: string) => {
-    const response = await api.get(`/customers/${id}/credit-summary`);
+  getAccountStatement: async (id: string) => {
+    const response = await api.get(`/account/customers/${id}/statement`);
     return response.data;
   },
 
-  getCreditDocuments: async (id: string) => {
-    const response = await api.get(`/customers/${id}/credit-documents`);
-    return response.data;
-  },
-
-  getCreditMovements: async (id: string) => {
-    const response = await api.get(`/customers/${id}/credit-movements`);
+  getAccountEntries: async (id: string) => {
+    const response = await api.get('/account/entries', {
+      params: { customerId: id }
+    });
     return response.data;
   },
 
   applyCreditPayment: async (id: string, data: any) => {
-    const response = await api.post(`/customers/${id}/credit-payments/apply`, data);
+    const response = await api.post('/account/entries', {
+      customerId: id,
+      entryType: 'payment',
+      entryDirection: 'credit',
+      amount: data.amount,
+      sourceModule: 'payments',
+      sourceEntityType: 'customer_account_payment',
+      sourceEntityId: `${id}:${Date.now()}`,
+      cashierUserId: data.paidByUserId,
+      reasonCode: 'customer_account_payment',
+      reasonText: 'Pago a cuenta / adelanto de cliente',
+      notes: data.notes
+    });
     return response.data;
   },
 
   applyCreditAdjustment: async (id: string, data: any) => {
-    const response = await api.post(`/customers/${id}/credit-adjustments`, data);
-    return response.data;
-  },
-
-  getCreditReceiptPdf: async (id: string, receiptId: string) => {
-    const response = await api.get(`/customers/${id}/credit-receipts/${receiptId}/pdf`);
+    const response = await api.post('/account/adjustments', {
+      ...data,
+      customerId: id
+    });
     return response.data;
   },
 
