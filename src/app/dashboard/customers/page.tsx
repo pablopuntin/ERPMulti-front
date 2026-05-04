@@ -467,7 +467,7 @@ export default function CustomersManagementPage() {
       const summaryEntries = await Promise.all(
         customerList.map(async (customer) => {
           try {
-            const summary = await customersAPI.getAccountStatement(customer.id);
+            const summary = await customersAPI.getAccountStatement(customer.id, resolvedBranchId || undefined);
             return [customer.id, summary] as const;
           } catch {
             return [customer.id, {

@@ -365,8 +365,9 @@ export const customersAPI = {
     return response.data;
   },
 
-  getAccountStatement: async (id: string) => {
-    const response = await api.get(`/account/customers/${id}/statement`);
+  getAccountStatement: async (id: string, branchId?: string) => {
+    const params = branchId ? { branchId } : undefined;
+    const response = await api.get(`/account/customers/${id}/statement`, { params });
     return response.data;
   },
 
