@@ -239,6 +239,10 @@ export default function CustomersManagementPage() {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedBranchId, setSelectedBranchId] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(20);
+  const [totalPages, setTotalPages] = useState(0);
+  const [totalCustomers, setTotalCustomers] = useState(0);
   const [modalOpen, setModalOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [editingCustomer, setEditingCustomer] = useState<Customer | null>(null);
@@ -310,10 +314,13 @@ export default function CustomersManagementPage() {
     setBranches(mapped);
   };
 
-  const loadCustomers = async (branchId?: string, search?: string) => {
+  const loadCustomers = async (branchId?: string, search?: string, page: number = 1, limit: number = 20) => {
     try {
       setLoading(true);
-      const params: Record<string, string> = {};
+      const params: Record<string, string | number> = {
+        page,
+        limit
+      };
 
       if (branchId && branchId !== "all") {
         params.branchId = branchId;
@@ -323,12 +330,25 @@ export default function CustomersManagementPage() {
         params.search = search.trim();
       }
 
-      const data = await customersAPI.getAll(params);
-      setCustomers(Array.isArray(data) ? data : []);
+      const response = await customersAPI.getAll(params);
+      
+      // Manejar nueva respuesta con paginación
+      if (response && typeof response === 'object' && 'data' in response && 'pagination' in response) {
+        setCustomers(Array.isArray(response.data) ? response.data : []);
+        setTotalPages(response.pagination?.totalPages || 0);
+        setTotalCustomers(response.pagination?.total || 0);
+      } else {
+        // Backward compatibility si el backend no retorna paginación
+        setCustomers(Array.isArray(response) ? response : []);
+        setTotalPages(0);
+        setTotalCustomers(Array.isArray(response) ? response.length : 0);
+      }
     } catch (error: any) {
       const backendMessage = error?.response?.data?.message;
       setErrorMessage(Array.isArray(backendMessage) ? backendMessage.join(" ") : backendMessage || "No se pudieron cargar los clientes.");
       setCustomers([]);
+      setTotalPages(0);
+      setTotalCustomers(0);
     } finally {
       setLoading(false);
     }
@@ -384,7 +404,12 @@ export default function CustomersManagementPage() {
   }, []);
 
   useEffect(() => {
-    loadCustomers(resolvedBranchId || undefined, searchTerm);
+    loadCustomers(resolvedBranchId || undefined, searchTerm, currentPage, pageSize);
+  }, [resolvedBranchId, searchTerm, currentPage, pageSize]);
+
+  // Resetear a página 1 cuando cambian filtros
+  useEffect(() => {
+    setCurrentPage(1);
   }, [resolvedBranchId, searchTerm]);
 
   useEffect(() => {
@@ -549,7 +574,8 @@ export default function CustomersManagementPage() {
       setSuccessMessage(editingCustomer ? "Cliente actualizado correctamente." : "Cliente creado correctamente.");
       setModalOpen(false);
       resetForm();
-      await loadCustomers(resolvedBranchId || undefined, searchTerm);
+      setCurrentPage(1);
+      await loadCustomers(resolvedBranchId || undefined, searchTerm, 1, pageSize);
     } catch (error: any) {
       const backendMessage = error?.response?.data?.message;
       setErrorMessage(Array.isArray(backendMessage) ? backendMessage.join(" ") : backendMessage || "No se pudo guardar el cliente.");
@@ -569,7 +595,8 @@ export default function CustomersManagementPage() {
       setDeleteDialogOpen(false);
       setCustomerToDelete(null);
       setSuccessMessage("Cliente eliminado correctamente.");
-      await loadCustomers(resolvedBranchId || undefined, searchTerm);
+      setCurrentPage(1);
+      await loadCustomers(resolvedBranchId || undefined, searchTerm, 1, pageSize);
     } catch (error: any) {
       const backendMessage = error?.response?.data?.message;
       setErrorMessage(Array.isArray(backendMessage) ? backendMessage.join(" ") : backendMessage || "No se pudo eliminar el cliente.");
@@ -838,6 +865,36 @@ export default function CustomersManagementPage() {
           <AlertTitle>Operación exitosa</AlertTitle>
           <AlertDescription>{successMessage}</AlertDescription>
         </Alert>
+      )}
+
+      {/* Paginación - Sticky top */}
+      {totalPages > 0 && (
+        <div className="sticky top-0 z-10 bg-background border-b border-border px-4 py-3 mb-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+          <div className="text-sm text-muted-foreground">
+            Página <span className="font-medium text-foreground">{currentPage}</span> de <span className="font-medium text-foreground">{totalPages}</span>
+            {totalCustomers > 0 && (
+              <span className="ml-2">({totalCustomers} clientes en total)</span>
+            )}
+          </div>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
+              disabled={currentPage <= 1 || loading}
+            >
+              Anterior
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
+              disabled={currentPage >= totalPages || loading}
+            >
+              Siguiente
+            </Button>
+          </div>
+        </div>
       )}
 
       <Card>
