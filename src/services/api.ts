@@ -370,9 +370,9 @@ export const customersAPI = {
     return response.data;
   },
 
-  getAccountEntries: async (id: string) => {
+  getAccountEntries: async (id: string, params?: any) => {
     const response = await api.get('/account/entries', {
-      params: { customerId: id }
+      params: { customerId: id, ...params }
     });
     return response.data;
   },

@@ -252,6 +252,8 @@ export default function CustomersManagementPage() {
   const [creditSummaryByCustomer, setCreditSummaryByCustomer] = useState<Record<string, CustomerAccountStatement>>({});
   const [creditSummaryLoading, setCreditSummaryLoading] = useState(false);
   const [creditMovements, setCreditMovements] = useState<CustomerAccountMovement[]>([]);
+  const [creditMovementsLimit, setCreditMovementsLimit] = useState(10);
+  const [creditMovementsHasMore, setCreditMovementsHasMore] = useState(false);
   const [creditLoading, setCreditLoading] = useState(false);
   const [creditError, setCreditError] = useState("");
   const [expandedCustomerId, setExpandedCustomerId] = useState("");
@@ -332,23 +334,26 @@ export default function CustomersManagementPage() {
     }
   };
 
-  const loadCreditData = async (customerId: string) => {
+  const loadCreditData = async (customerId: string, movementLimit = creditMovementsLimit) => {
     try {
       setCreditLoading(true);
       setCreditError("");
 
       const [summary, movements] = await Promise.all([
         customersAPI.getAccountStatement(customerId),
-        customersAPI.getAccountEntries(customerId),
+        customersAPI.getAccountEntries(customerId, { limit: movementLimit + 1, offset: 0 }),
       ]);
 
+      const movementList = Array.isArray(movements) ? movements : [];
       setCreditSummary(summary || null);
-      setCreditMovements(Array.isArray(movements) ? movements : []);
+      setCreditMovements(movementList.slice(0, movementLimit));
+      setCreditMovementsHasMore(movementList.length > movementLimit);
     } catch (error: any) {
       const backendMessage = error?.response?.data?.message;
       setCreditError(Array.isArray(backendMessage) ? backendMessage.join(" ") : backendMessage || "No se pudo cargar la cuenta corriente del cliente.");
       setCreditSummary(null);
       setCreditMovements([]);
+      setCreditMovementsHasMore(false);
     } finally {
       setCreditLoading(false);
     }
@@ -402,17 +407,29 @@ export default function CustomersManagementPage() {
     if (!selectedCustomerId) {
       setCreditSummary(null);
       setCreditMovements([]);
+      setCreditMovementsHasMore(false);
       setCreditError("");
       return;
     }
 
-    loadCreditData(selectedCustomerId);
+    setCreditMovementsLimit(10);
+    loadCreditData(selectedCustomerId, 10);
   }, [selectedCustomerId]);
 
   const selectedCustomer = useMemo(
     () => customers.find((customer) => customer.id === selectedCustomerId) || null,
     [customers, selectedCustomerId],
   );
+
+  const handleShowMoreCreditMovements = () => {
+    if (!selectedCustomerId || creditLoading) {
+      return;
+    }
+
+    const nextLimit = creditMovementsLimit + 10;
+    setCreditMovementsLimit(nextLimit);
+    loadCreditData(selectedCustomerId, nextLimit);
+  };
 
   const loadCreditSummarySnapshots = async (customerList: Customer[]) => {
     if (!customerList.length) {
