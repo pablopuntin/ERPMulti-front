@@ -292,8 +292,8 @@ function NewProductContent() {
         productBase: {
           name: product.name || variant.productBase?.name,
           description: product.description || '',
-          categoryId: product.categoryId || variant.category?.id || '',
-          brandId: product.brandId || variant.brand?.id || ''
+          categoryId: product.categoryId || variant.productBase?.category?.id || '',
+          brandId: product.brandId || variant.productBase?.brand?.id || ''
         },
         existingProduct: product,
         variants: productVariants.map((v: any) => ({

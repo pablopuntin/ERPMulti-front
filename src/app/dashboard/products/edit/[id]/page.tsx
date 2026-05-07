@@ -289,8 +289,8 @@ export default function EditProductPage() {
         productBase: {
           name: product.name || variant.productBase?.name,
           description: product.description || '',
-          categoryId: product.category?.id || product.categoryId || variant.category?.id || '',
-          brandId: product.brand?.id || product.brandId || variant.brand?.id || ''
+          categoryId: product.category?.id || product.categoryId || variant.productBase?.category?.id || '',
+          brandId: product.brand?.id || product.brandId || variant.productBase?.brand?.id || ''
         },
         existingProduct: product,
         variants: [selectedVariant],

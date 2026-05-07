@@ -20,6 +20,8 @@ export interface ProductBase {
   imgURL?: string;
   brandId: string;
   categoryId?: string;
+  category?: ProductRelation;
+  brand?: ProductRelation;
   createdAt: string;
   updatedAt: string;
   variants?: ProductVariant[];
@@ -45,8 +47,6 @@ export interface ProductVariant {
   createdAt: string;
   updatedAt: string;
   productBase?: ProductBase;
-  category?: ProductRelation;
-  brand?: ProductRelation;
   stockByBranch?: StockByBranch[];
   totalStock?: number;
   assignedBranchIds?: string[];
