@@ -134,11 +134,11 @@ export default function SalesPage() {
 
   const filteredProducts = useMemo(() => {
     return products.filter((product) => {
-      const matchesSearch = !debouncedSearchTerm.trim() || [product.name, product.sku, product.productBase?.name, product.brand?.name, product.category?.name]
+      const matchesSearch = !debouncedSearchTerm.trim() || [product.name, product.sku, product.productBase?.name, product.productBase?.brand?.name, product.productBase?.category?.name]
         .filter(Boolean)
         .some((value) => String(value).toLowerCase().includes(debouncedSearchTerm.toLowerCase()));
-      const matchesCategory = selectedCategory === "all" || product.category?.id === selectedCategory;
-      const matchesBrand = selectedBrand === "all" || product.brand?.id === selectedBrand;
+      const matchesCategory = selectedCategory === "all" || product.productBase?.category?.id === selectedCategory;
+      const matchesBrand = selectedBrand === "all" || product.productBase?.brand?.id === selectedBrand;
       const matchesProductBase = selectedProductBase === "all" || product.productBase?.id === selectedProductBase;
       const matchesVariant = selectedVariant === "all" || product.id === selectedVariant;
       return matchesSearch && matchesCategory && matchesBrand && matchesProductBase && matchesVariant;
@@ -519,8 +519,8 @@ export default function SalesPage() {
                       <div className="text-sm text-muted-foreground">
                         {product.sku || "Sin SKU"}
                         {product.productBase?.name ? ` · ${product.productBase.name}` : ""}
-                        {product.brand?.name ? ` · ${product.brand.name}` : ""}
-                        {product.category?.name ? ` · ${product.category.name}` : ""}
+                        {product.productBase?.brand?.name ? ` · ${product.productBase.brand.name}` : ""}
+                        {product.productBase?.category?.name ? ` · ${product.productBase.category.name}` : ""}
                       </div>
                       <div className="text-lg font-semibold text-foreground">${Number(product.price || 0).toLocaleString("es-AR")}</div>
                       <StockDisplay stocks={product.stockByBranch || []} compact />

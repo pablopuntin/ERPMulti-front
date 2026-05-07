@@ -960,8 +960,8 @@ export default function ProductsPage() {
                     </div>
                   </td>
                   <td className="px-2 py-2 text-muted-foreground align-top break-words leading-tight">{product.productBase?.name || '-'}</td>
-                  <td className="px-2 py-2 text-muted-foreground align-top break-words leading-tight">{product.category?.name || '-'}</td>
-                  <td className="px-2 py-2 text-muted-foreground align-top break-words leading-tight">{product.brand?.name || '-'}</td>
+                  <td className="px-2 py-2 text-muted-foreground align-top break-words leading-tight">{product.productBase?.category?.name || '-'}</td>
+                  <td className="px-2 py-2 text-muted-foreground align-top break-words leading-tight">{product.productBase?.brand?.name || '-'}</td>
                   <td className="px-2 py-2 text-muted-foreground align-top break-words leading-tight">{product.color || '-'}</td>
                   <td className="px-2 py-2 text-muted-foreground align-top break-words leading-tight">{product.size || '-'}</td>
                   <td className="px-2 py-2 font-medium text-foreground align-top break-words leading-tight">
