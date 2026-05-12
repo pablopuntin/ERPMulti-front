@@ -1418,7 +1418,7 @@ export default function ProductsPage() {
                         <td className="p-3 text-muted-foreground">
                           {new Date(item.createdAt).toLocaleString('es-AR')}
                         </td>
-                        <td className="p-3 font-medium text-foreground">{item.variantName}</td>
+                        <td className="p-3 font-bold text-foreground">{item.variantName}</td>
                         <td className="p-3 font-semibold text-foreground">{item.previousQuantity ?? '-'}</td>
                         <td className="p-3 font-semibold text-foreground">{item.newQuantity ?? '-'}</td>
                         <td className="p-3">
