@@ -1336,7 +1336,7 @@ export default function ProductsPage() {
                       .filter(p => selectedIds.includes(p.id))
                       .map((product) => (
                         <tr key={product.id} className="border-t border-border">
-                          <td className="p-3 font-medium text-foreground">{product.name}</td>
+                          <td className="p-3 font-bold text-gray-900">{product.name}</td>
                           <td className="p-3 text-muted-foreground">{product.sku || 'Sin SKU'}</td>
                           <td className="p-3">
                             <Input
@@ -1418,9 +1418,9 @@ export default function ProductsPage() {
                         <td className="p-3 text-muted-foreground">
                           {new Date(item.createdAt).toLocaleString('es-AR')}
                         </td>
-                        <td className="p-3 font-bold text-foreground">{item.variantName}</td>
-                        <td className="p-3 font-semibold text-foreground">{item.previousQuantity ?? '-'}</td>
-                        <td className="p-3 font-semibold text-foreground">{item.newQuantity ?? '-'}</td>
+                        <td className="p-3 font-bold text-gray-900">{item.variantName}</td>
+                        <td className="p-3 font-semibold text-gray-900">{item.previousQuantity ?? '-'}</td>
+                        <td className="p-3 font-semibold text-gray-900">{item.newQuantity ?? '-'}</td>
                         <td className="p-3">
                           <span className={item.quantity >= 0 ? "text-green-600" : "text-red-600"}>
                             {item.quantity >= 0 ? '+' : ''}{item.quantity}
