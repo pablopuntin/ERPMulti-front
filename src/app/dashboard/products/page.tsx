@@ -12,7 +12,8 @@ import {
   Package,
   Filter,
   Eye,
-  Wrench
+  Wrench,
+  History
 } from "lucide-react";
 import { Button } from "@/app/components/ui/button";
 import { Input } from "@/app/components/ui/input";
@@ -80,6 +81,9 @@ export default function ProductsPage() {
   const [adjustmentLoading, setAdjustmentLoading] = useState(false);
   const [adjustmentMessage, setAdjustmentMessage] = useState<string | null>(null);
   const [adjustmentForm, setAdjustmentForm] = useState<Record<string, { newQuantity: string; reason: string }>>({});
+  const [adjustmentHistoryDialogOpen, setAdjustmentHistoryDialogOpen] = useState(false);
+  const [adjustmentHistory, setAdjustmentHistory] = useState<any[]>([]);
+  const [adjustmentHistoryLoading, setAdjustmentHistoryLoading] = useState(false);
   const activeBranchId = user?.activeBranchId || user?.branchId || "";
 
   const queryParams = useMemo(() => ({
@@ -570,6 +574,19 @@ export default function ProductsPage() {
     }
   };
 
+  const handleAdjustmentHistoryOpen = async () => {
+    setAdjustmentHistoryDialogOpen(true);
+    setAdjustmentHistoryLoading(true);
+    try {
+      const history = await stockAPI.getAdjustmentHistory();
+      setAdjustmentHistory(history);
+    } catch (error: any) {
+      console.error("Error loading adjustment history:", error);
+    } finally {
+      setAdjustmentHistoryLoading(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="w-full px-4 py-6 space-y-6">
@@ -774,15 +791,25 @@ export default function ProductsPage() {
             </div>
             <div>
               <label className="text-sm font-medium text-foreground block mb-1.5">Ajustes de inventario</label>
-              <Button
-                onClick={handleAdjustmentOpen}
-                disabled={selectedIds.length === 0}
-                className="w-full h-9"
-                variant="outline"
-              >
-                <Wrench className="w-4 h-4 mr-2" />
-                Ajuste ({selectedIds.length})
-              </Button>
+              <div className="flex gap-2">
+                <Button
+                  onClick={handleAdjustmentOpen}
+                  disabled={selectedIds.length === 0}
+                  className="flex-1 h-9"
+                  variant="outline"
+                >
+                  <Wrench className="w-4 h-4 mr-2" />
+                  Ajuste ({selectedIds.length})
+                </Button>
+                <Button
+                  onClick={handleAdjustmentHistoryOpen}
+                  className="flex-1 h-9"
+                  variant="outline"
+                >
+                  <History className="w-4 h-4 mr-2" />
+                  Historial
+                </Button>
+              </div>
             </div>
           </div>
 
@@ -1359,6 +1386,55 @@ export default function ProductsPage() {
           </Button>
           <Button onClick={handleAdjustmentSubmit} disabled={adjustmentLoading || selectedIds.length === 0}>
             {adjustmentLoading ? 'Procesando...' : 'Confirmar Ajustes'}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      <Dialog open={adjustmentHistoryDialogOpen} onClose={() => setAdjustmentHistoryDialogOpen(false)} maxWidth="lg" fullWidth>
+        <DialogTitle>Historial de Ajustes de Inventario</DialogTitle>
+        <DialogContent>
+          <div className="space-y-4 pt-2">
+            {adjustmentHistoryLoading ? (
+              <div className="text-center py-8 text-muted-foreground">Cargando historial...</div>
+            ) : adjustmentHistory.length === 0 ? (
+              <div className="text-center py-8 text-muted-foreground">No hay ajustes registrados</div>
+            ) : (
+              <div className="max-h-[500px] overflow-auto border border-border rounded-lg">
+                <table className="w-full text-sm">
+                  <thead className="bg-muted/50 sticky top-0">
+                    <tr>
+                      <th className="text-left p-3 font-medium">Fecha</th>
+                      <th className="text-left p-3 font-medium">Producto</th>
+                      <th className="text-left p-3 font-medium">Cantidad</th>
+                      <th className="text-left p-3 font-medium">Motivo</th>
+                      <th className="text-left p-3 font-medium">Usuario</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {adjustmentHistory.map((item) => (
+                      <tr key={item.id} className="border-t border-border">
+                        <td className="p-3 text-muted-foreground">
+                          {new Date(item.createdAt).toLocaleString('es-AR')}
+                        </td>
+                        <td className="p-3 font-medium text-foreground">{item.variantName}</td>
+                        <td className="p-3">
+                          <span className={item.quantity >= 0 ? "text-green-600" : "text-red-600"}>
+                            {item.quantity >= 0 ? '+' : ''}{item.quantity}
+                          </span>
+                        </td>
+                        <td className="p-3 text-muted-foreground">{item.reason}</td>
+                        <td className="p-3 text-muted-foreground">{item.user}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        </DialogContent>
+        <DialogActions>
+          <Button variant="outline" onClick={() => setAdjustmentHistoryDialogOpen(false)}>
+            Cerrar
           </Button>
         </DialogActions>
       </Dialog>
