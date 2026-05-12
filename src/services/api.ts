@@ -477,6 +477,22 @@ export const stockAPI = {
     const response = await api.get(`/stock/transfers/${id}`);
     return response.data;
   },
+
+  // Ajustes de inventario (Fase 3A)
+  createAdjustment: async (data: {
+    variantId: string;
+    branchId: string;
+    newQuantity: number;
+    reason: string;
+  }) => {
+    const response = await api.post('/stock/adjustments', data);
+    return response.data;
+  },
+
+  getAdjustmentHistory: async (params?: { variantId?: string; branchId?: string }) => {
+    const response = await api.get('/stock/adjustments/history', { params });
+    return response.data;
+  },
   
   update: async (id: string, data: any) => {
     const response = await api.patch(`/stock/${id}`, data);
