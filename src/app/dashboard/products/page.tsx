@@ -1405,7 +1405,9 @@ export default function ProductsPage() {
                     <tr>
                       <th className="text-left p-3 font-medium">Fecha</th>
                       <th className="text-left p-3 font-medium">Producto</th>
-                      <th className="text-left p-3 font-medium">Cantidad</th>
+                      <th className="text-left p-3 font-medium">Anterior</th>
+                      <th className="text-left p-3 font-medium">Nueva</th>
+                      <th className="text-left p-3 font-medium">Diferencia</th>
                       <th className="text-left p-3 font-medium">Motivo</th>
                       <th className="text-left p-3 font-medium">Usuario</th>
                     </tr>
@@ -1417,6 +1419,8 @@ export default function ProductsPage() {
                           {new Date(item.createdAt).toLocaleString('es-AR')}
                         </td>
                         <td className="p-3 font-medium text-foreground">{item.variantName}</td>
+                        <td className="p-3 text-muted-foreground">{item.previousQuantity ?? '-'}</td>
+                        <td className="p-3 font-medium text-foreground">{item.newQuantity ?? '-'}</td>
                         <td className="p-3">
                           <span className={item.quantity >= 0 ? "text-green-600" : "text-red-600"}>
                             {item.quantity >= 0 ? '+' : ''}{item.quantity}

@@ -51,20 +51,22 @@ export const StockDisplay: React.FC<StockDisplayProps> = ({
         {resolvedStocks.map((stock, index) => (
           <div
             key={`${stock.locationType || 'branch'}-${stock.branchId || stock.locationLabel || index}`}
-            className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-medium ${stock.isLowStock 
-              ? 'border-amber-500/40 bg-amber-500/10 text-amber-100' 
+            className={`inline-flex flex-col items-center gap-0.5 rounded-lg border px-2 py-1 text-xs ${stock.isLowStock
+              ? 'border-amber-500/40 bg-amber-500/10 text-amber-100'
               : 'border-border bg-muted/30 text-foreground'
             }`}
           >
-            <span title={stock.locationType}>
-              {getLocationIcon(stock)}
-            </span>
-            <span className="min-w-0 max-w-[100px] truncate">
-              {getLabel(stock)}
-            </span>
-            <span className={`rounded px-1.5 py-0.5 text-[10px] font-semibold ${stock.isLowStock 
-              ? 'bg-amber-400/20 text-amber-100' 
-              : 'bg-emerald-400/15 text-emerald-100'
+            <div className="flex items-center gap-1">
+              <span title={stock.locationType}>
+                {getLocationIcon(stock)}
+              </span>
+              <span className="max-w-[80px] truncate font-medium">
+                {getLabel(stock)}
+              </span>
+            </div>
+            <span className={`text-center font-bold ${stock.isLowStock
+              ? 'text-amber-100'
+              : 'text-emerald-100'
             }`}>
               {stock.availableQuantity}
             </span>
