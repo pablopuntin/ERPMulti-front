@@ -4,21 +4,22 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createPortal } from "react-dom";
 import { useAuth } from "@/components/auth/AuthContext";
-import { 
-  Plus, 
-  Search, 
-  Edit, 
-  Trash2, 
+import {
+  Plus,
+  Search,
+  Edit,
+  Trash2,
   Package,
   Filter,
-  Eye
+  Eye,
+  Wrench
 } from "lucide-react";
 import { Button } from "@/app/components/ui/button";
 import { Input } from "@/app/components/ui/input";
 import { useProducts } from "./hooks/useProducts";
 import { StockDisplay } from "@/components/products/StockDisplay";
 import { Dialog, DialogTitle, DialogContent, DialogActions } from "@mui/material";
-import { branchesAPI, brandsAPI, categoriesAPI, productsAPI, productsBaseAPI } from "@/services/api";
+import { branchesAPI, brandsAPI, categoriesAPI, productsAPI, productsBaseAPI, stockAPI } from "@/services/api";
 import CategoryModal from "@/app/components/categories/CategoryModal";
 
 type FilterOption = {
@@ -75,6 +76,10 @@ export default function ProductsPage() {
   }>({ open: false, product: null });
   const [categoryModalOpen, setCategoryModalOpen] = useState(false);
   const [editingCategory, setEditingCategory] = useState<any | null>(null);
+  const [adjustmentDialogOpen, setAdjustmentDialogOpen] = useState(false);
+  const [adjustmentLoading, setAdjustmentLoading] = useState(false);
+  const [adjustmentMessage, setAdjustmentMessage] = useState<string | null>(null);
+  const [adjustmentForm, setAdjustmentForm] = useState<Record<string, { newQuantity: string; reason: string }>>({});
   const activeBranchId = user?.activeBranchId || user?.branchId || "";
 
   const queryParams = useMemo(() => ({
@@ -467,13 +472,101 @@ export default function ProductsPage() {
 
   const confirmDelete = async () => {
     if (!deleteDialog.product) return;
-    
+
     try {
       await deleteProduct(deleteDialog.product.id);
       setDeleteDialog({ open: false, product: null });
       refreshProducts();
     } catch (err) {
       alert("Error al eliminar el producto");
+    }
+  };
+
+  const handleAdjustmentOpen = () => {
+    if (selectedIds.length === 0) {
+      setAdjustmentMessage("Seleccioná al menos un producto para ajustar.");
+      setAdjustmentDialogOpen(true);
+      return;
+    }
+
+    if (!activeBranchId) {
+      setAdjustmentMessage("Seleccioná una sucursal activa para hacer ajustes.");
+      setAdjustmentDialogOpen(true);
+      return;
+    }
+
+    // Inicializar formulario con los productos seleccionados
+    const initialForm: Record<string, { newQuantity: string; reason: string }> = {};
+    selectedIds.forEach(id => {
+      initialForm[id] = { newQuantity: "", reason: "" };
+    });
+    setAdjustmentForm(initialForm);
+    setAdjustmentMessage(null);
+    setAdjustmentDialogOpen(true);
+  };
+
+  const handleAdjustmentSubmit = async () => {
+    if (!activeBranchId) {
+      setAdjustmentMessage("Seleccioná una sucursal activa para hacer ajustes.");
+      return;
+    }
+
+    // Validar que todos los productos tengan cantidad y motivo
+    const invalidProducts = selectedIds.filter(id => {
+      const form = adjustmentForm[id];
+      return !form || !form.newQuantity || !form.reason;
+    });
+
+    if (invalidProducts.length > 0) {
+      setAdjustmentMessage("Completá la nueva cantidad y el motivo para todos los productos seleccionados.");
+      return;
+    }
+
+    setAdjustmentLoading(true);
+    setAdjustmentMessage(null);
+
+    try {
+      const results = await Promise.all(
+        selectedIds.map(async (variantId) => {
+          const form = adjustmentForm[variantId];
+          const newQuantity = Number(form.newQuantity);
+
+          if (newQuantity < 0) {
+            return { variantId, error: "La cantidad no puede ser negativa" };
+          }
+
+          try {
+            const result = await stockAPI.createAdjustment({
+              variantId,
+              branchId: activeBranchId,
+              newQuantity,
+              reason: form.reason,
+            });
+            return { variantId, success: true, result };
+          } catch (error: any) {
+            return { variantId, error: error?.response?.data?.message || "Error al ajustar" };
+          }
+        })
+      );
+
+      const errors = results.filter(r => r.error);
+      const successes = results.filter(r => r.success);
+
+      if (errors.length === 0) {
+        setAdjustmentMessage(`✅ Se ajustaron ${successes.length} productos correctamente.`);
+        setSelectedIds([]);
+        setAdjustmentForm({});
+        setTimeout(() => {
+          setAdjustmentDialogOpen(false);
+          refreshProducts();
+        }, 2000);
+      } else {
+        setAdjustmentMessage(`⚠️ ${successes.length} ajustados, ${errors.length} con errores. Revisá los detalles.`);
+      }
+    } catch (error: any) {
+      setAdjustmentMessage(error?.response?.data?.message || "Error al realizar ajustes.");
+    } finally {
+      setAdjustmentLoading(false);
     }
   };
 
@@ -678,6 +771,18 @@ export default function ProductsPage() {
                 <option value="price">Precio</option>
                 <option value="stock">Stock</option>
               </select>
+            </div>
+            <div>
+              <label className="text-sm font-medium text-foreground block mb-1.5">Ajustes de inventario</label>
+              <Button
+                onClick={handleAdjustmentOpen}
+                disabled={selectedIds.length === 0}
+                className="w-full h-9"
+                variant="outline"
+              >
+                <Wrench className="w-4 h-4 mr-2" />
+                Ajuste ({selectedIds.length})
+              </Button>
             </div>
           </div>
 
@@ -1167,6 +1272,93 @@ export default function ProductsPage() {
           </Button>
           <Button onClick={confirmDelete} variant="destructive">
             Eliminar
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      <Dialog open={adjustmentDialogOpen} onClose={() => setAdjustmentDialogOpen(false)} maxWidth="lg" fullWidth>
+        <DialogTitle>Ajuste de Inventario (Batch)</DialogTitle>
+        <DialogContent>
+          <div className="space-y-4 pt-2">
+            {adjustmentMessage && (
+              <div className="rounded-lg border border-border bg-muted/30 px-3 py-2 text-sm text-foreground">
+                {adjustmentMessage}
+              </div>
+            )}
+
+            <div className="rounded-lg border border-border bg-muted/30 px-3 py-2 text-sm text-foreground">
+              <strong>Sucursal:</strong> {activeBranchName}
+              <div className="text-xs text-muted-foreground mt-1">
+                Todos los ajustes se aplican a la sucursal activa. No se permite ajustar stock de otras sucursales.
+              </div>
+            </div>
+
+            {selectedIds.length > 0 && (
+              <div className="max-h-[400px] overflow-auto border border-border rounded-lg">
+                <table className="w-full text-sm">
+                  <thead className="bg-muted/50 sticky top-0">
+                    <tr>
+                      <th className="text-left p-3 font-medium">Producto</th>
+                      <th className="text-left p-3 font-medium">SKU</th>
+                      <th className="text-left p-3 font-medium">Nueva Cantidad</th>
+                      <th className="text-left p-3 font-medium">Motivo</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filteredProducts
+                      .filter(p => selectedIds.includes(p.id))
+                      .map((product) => (
+                        <tr key={product.id} className="border-t border-border">
+                          <td className="p-3 font-medium text-foreground">{product.name}</td>
+                          <td className="p-3 text-muted-foreground">{product.sku || 'Sin SKU'}</td>
+                          <td className="p-3">
+                            <Input
+                              type="number"
+                              min="0"
+                              value={adjustmentForm[product.id]?.newQuantity || ''}
+                              onChange={(e) => setAdjustmentForm(prev => ({
+                                ...prev,
+                                [product.id]: {
+                                  ...prev[product.id],
+                                  newQuantity: e.target.value
+                                }
+                              }))}
+                              placeholder="Nueva cantidad"
+                              className="h-8"
+                            />
+                          </td>
+                          <td className="p-3">
+                            <Input
+                              value={adjustmentForm[product.id]?.reason || ''}
+                              onChange={(e) => setAdjustmentForm(prev => ({
+                                ...prev,
+                                [product.id]: {
+                                  ...prev[product.id],
+                                  reason: e.target.value
+                                }
+                              }))}
+                              placeholder="Motivo obligatorio"
+                              className="h-8"
+                            />
+                          </td>
+                        </tr>
+                      ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+
+            <div className="text-xs text-muted-foreground">
+              Solo root y gerente_general pueden realizar ajustes. Motivo obligatorio para cada producto.
+            </div>
+          </div>
+        </DialogContent>
+        <DialogActions>
+          <Button variant="outline" onClick={() => setAdjustmentDialogOpen(false)}>
+            Cancelar
+          </Button>
+          <Button onClick={handleAdjustmentSubmit} disabled={adjustmentLoading || selectedIds.length === 0}>
+            {adjustmentLoading ? 'Procesando...' : 'Confirmar Ajustes'}
           </Button>
         </DialogActions>
       </Dialog>

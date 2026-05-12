@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { ArrowRightLeft, History, Package, RefreshCw, Truck, Wrench } from "lucide-react";
+import { ArrowRightLeft, History, Package, RefreshCw, Truck } from "lucide-react";
 import { Button } from "@/app/components/ui/button";
 import { Input } from "@/app/components/ui/input";
 import { productsAPI, stockAPI } from "@/services/api";
@@ -55,28 +55,16 @@ type TransferHistoryItem = {
   } | null;
 };
 
-type ViewMode = "stock" | "transit" | "history" | "adjustments";
-
-type AdjustmentHistoryItem = {
-  id: string;
-  variantId: string;
-  variantName: string;
-  quantity: number;
-  reason: string;
-  user: string;
-  createdAt: string;
-};
+type ViewMode = "stock" | "transit" | "history";
 
 export default function StockPage() {
   const { user } = useAuth();
   const [variants, setVariants] = useState<VariantOption[]>([]);
   const [branches, setBranches] = useState<BranchOption[]>([]);
   const [transferHistory, setTransferHistory] = useState<TransferHistoryItem[]>([]);
-  const [adjustmentHistory, setAdjustmentHistory] = useState<AdjustmentHistoryItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [historyLoading, setHistoryLoading] = useState(false);
   const [transferLoading, setTransferLoading] = useState(false);
-  const [adjustmentLoading, setAdjustmentLoading] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<ViewMode>("stock");
   const [variantFilter, setVariantFilter] = useState("all");
@@ -90,12 +78,6 @@ export default function StockPage() {
     toLocationType: "warehouse",
     toBranchId: "",
     quantity: "1",
-    reason: "",
-  });
-  const [adjustmentForm, setAdjustmentForm] = useState({
-    variantId: "",
-    branchId: "",
-    newQuantity: "",
     reason: "",
   });
   const activeBranchId = user?.activeBranchId || user?.branchId || "";
@@ -210,60 +192,6 @@ export default function StockPage() {
     }
   };
 
-  const loadAdjustmentHistory = async () => {
-    setHistoryLoading(true);
-    try {
-      const data = await stockAPI.getAdjustmentHistory();
-      setAdjustmentHistory(Array.isArray(data) ? data : []);
-    } catch (error: any) {
-      setMessage(error?.response?.data?.message || "No se pudo cargar el historial de ajustes.");
-    } finally {
-      setHistoryLoading(false);
-    }
-  };
-
-  const handleAdjustmentSubmit = async () => {
-    if (!adjustmentForm.variantId || !adjustmentForm.branchId || !adjustmentForm.newQuantity || !adjustmentForm.reason) {
-      setMessage("Completá todos los campos del formulario de ajuste.");
-      return;
-    }
-
-    const newQuantity = Number(adjustmentForm.newQuantity);
-    if (newQuantity < 0) {
-      setMessage("La cantidad no puede ser negativa.");
-      return;
-    }
-
-    setAdjustmentLoading(true);
-    try {
-      const result = await stockAPI.createAdjustment({
-        variantId: adjustmentForm.variantId,
-        branchId: adjustmentForm.branchId,
-        newQuantity,
-        reason: adjustmentForm.reason,
-      });
-
-      setMessage(result.message || "Ajuste realizado correctamente");
-      if (result.alert) {
-        setMessage(`${result.message} - ⚠️ ${result.alert.message}`);
-      }
-
-      // Limpiar formulario
-      setAdjustmentForm({
-        variantId: "",
-        branchId: "",
-        newQuantity: "",
-        reason: "",
-      });
-
-      // Recargar historial
-      await loadAdjustmentHistory();
-    } catch (error: any) {
-      setMessage(error?.response?.data?.message || "No se pudo realizar el ajuste.");
-    } finally {
-      setAdjustmentLoading(false);
-    }
-  };
 
   const enrichVariantsWithLocations = async (catalogItems: VariantOption[]) => {
     const items = Array.isArray(catalogItems) ? catalogItems : [];
@@ -345,11 +273,6 @@ export default function StockPage() {
     }
   }, [transferForm.variantId, variants]);
 
-  useEffect(() => {
-    if (viewMode === "adjustments") {
-      loadAdjustmentHistory();
-    }
-  }, [viewMode]);
 
   const handleTransferSubmit = async () => {
     if (!transferForm.variantId) {
@@ -601,10 +524,6 @@ export default function StockPage() {
                 <History className="w-4 h-4 mr-2" />
                 Historial
               </Button>
-              <Button variant={viewMode === "adjustments" ? "default" : "outline"} onClick={() => setViewMode("adjustments")}>
-                <Wrench className="w-4 h-4 mr-2" />
-                Ajustes
-              </Button>
             </div>
             <div className="w-full md:w-72">
               <Input
@@ -687,136 +606,6 @@ export default function StockPage() {
                 </table>
               </div>
             </>
-          ) : viewMode === "adjustments" ? (
-            <>
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                {/* Formulario de ajuste */}
-                <div className="bg-muted/40 rounded-lg p-4 space-y-4">
-                  <h3 className="text-lg font-semibold text-foreground flex items-center gap-2">
-                    <Wrench className="w-5 h-5" />
-                    Nuevo ajuste de inventario
-                  </h3>
-                  <p className="text-sm text-muted-foreground">
-                    Solo root y gerente_general pueden realizar ajustes. Motivo obligatorio.
-                  </p>
-
-                  <div>
-                    <label className="text-sm font-medium text-foreground block mb-1.5">Variante</label>
-                    <Input
-                      value={variantSearch}
-                      onChange={(e) => setVariantSearch(e.target.value)}
-                      placeholder="Buscar por nombre o SKU"
-                      className="mb-2"
-                    />
-                    <select
-                      value={adjustmentForm.variantId}
-                      onChange={(e) => setAdjustmentForm((prev) => ({ ...prev, variantId: e.target.value }))}
-                      className="flex h-10 w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900"
-                    >
-                      <option value="">Seleccionar variante</option>
-                      {filteredVariantOptions.map((variant) => (
-                        <option key={variant.id} value={variant.id}>
-                          {variant.name} ({variant.sku || "Sin SKU"})
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className="text-sm font-medium text-foreground block mb-1.5">Sucursal</label>
-                    <select
-                      value={adjustmentForm.branchId}
-                      onChange={(e) => setAdjustmentForm((prev) => ({ ...prev, branchId: e.target.value }))}
-                      className="flex h-10 w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900"
-                    >
-                      <option value="">Seleccionar sucursal</option>
-                      {branches.map((branch) => (
-                        <option key={branch.id} value={branch.id}>{branch.name}</option>
-                      ))}
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className="text-sm font-medium text-foreground block mb-1.5">Nueva cantidad (conteo físico)</label>
-                    <Input
-                      type="number"
-                      min="0"
-                      value={adjustmentForm.newQuantity}
-                      onChange={(e) => setAdjustmentForm((prev) => ({ ...prev, newQuantity: e.target.value }))}
-                      placeholder="Cantidad real en inventario"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="text-sm font-medium text-foreground block mb-1.5">Motivo (obligatorio)</label>
-                    <Input
-                      value={adjustmentForm.reason}
-                      onChange={(e) => setAdjustmentForm((prev) => ({ ...prev, reason: e.target.value }))}
-                      placeholder="Rotura, robo, error de carga, etc."
-                    />
-                  </div>
-
-                  {message && (
-                    <div className="text-sm text-foreground bg-muted rounded-lg px-3 py-2">
-                      {message}
-                    </div>
-                  )}
-
-                  <Button onClick={handleAdjustmentSubmit} disabled={adjustmentLoading} className="w-full">
-                    {adjustmentLoading ? "Procesando..." : "Confirmar ajuste"}
-                  </Button>
-                </div>
-
-                {/* Historial de ajustes */}
-                <div className="bg-muted/40 rounded-lg p-4 space-y-4">
-                  <h3 className="text-lg font-semibold text-foreground flex items-center gap-2">
-                    <History className="w-5 h-5" />
-                    Historial de ajustes
-                  </h3>
-
-                  <div className="max-h-[500px] overflow-auto border border-border rounded-lg">
-                    <table className="w-full text-sm">
-                      <thead className="bg-muted/50 sticky top-0">
-                        <tr>
-                          <th className="text-left p-3 font-medium">Fecha</th>
-                          <th className="text-left p-3 font-medium">Variante</th>
-                          <th className="text-left p-3 font-medium">Diferencia</th>
-                          <th className="text-left p-3 font-medium">Motivo</th>
-                          <th className="text-left p-3 font-medium">Usuario</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {historyLoading ? (
-                          <tr>
-                            <td colSpan={5} className="p-6 text-center text-muted-foreground">Cargando historial...</td>
-                          </tr>
-                        ) : adjustmentHistory.length === 0 ? (
-                          <tr>
-                            <td colSpan={5} className="p-6 text-center text-muted-foreground">No hay ajustes para mostrar.</td>
-                          </tr>
-                        ) : (
-                          adjustmentHistory.map((item) => (
-                            <tr key={item.id} className="border-t border-border">
-                              <td className="p-3">{new Date(item.createdAt).toLocaleString()}</td>
-                              <td className="p-3">
-                                <div className="font-medium text-foreground">{item.variantName}</div>
-                              </td>
-                              <td className="p-3">
-                                <span className={`px-2 py-1 rounded-full text-xs font-medium ${item.quantity > 0 ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
-                                  {item.quantity > 0 ? '+' : ''}{item.quantity}
-                                </span>
-                              </td>
-                              <td className="p-3">{item.reason}</td>
-                              <td className="p-3">{item.user}</td>
-                            </tr>
-                          ))
-                        )}
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-              </div>
-            </>
           ) : (
             <div className="max-h-[620px] overflow-auto border border-border rounded-lg">
               <table className="w-full text-sm">
@@ -881,7 +670,7 @@ export default function StockPage() {
 
           <div className="text-xs text-muted-foreground flex items-center gap-2">
             <Package className="w-4 h-4" />
-            Elegí si querés ver variantes con stock, variantes en tránsito, historial de transferencias o ajustes de inventario.
+            Elegí si querés ver variantes con stock, variantes en tránsito o el historial de transferencias.
           </div>
         </div>
       </div>
