@@ -934,7 +934,6 @@ import { useEffect, useMemo, useState } from "react";
 import {
   type LucideIcon,
   Download,
-  Calendar,
   TrendingUp,
   TrendingDown,
   DollarSign,
@@ -946,16 +945,20 @@ import {
   ArrowUpRight,
   ArrowDownRight,
   Building2,
+  CalendarDays,
 } from "lucide-react";
 
 import { Button } from "@/app/components/ui/button";
 import { useAuth } from "@/components/auth/AuthContext";
 import { branchesAPI, reportsAPI } from "@/services/api";
 
+/* =========================================================
+   TYPES
+========================================================= */
+
 interface ReportSummary {
   title: string;
   value: string;
-  change: number;
   changeType: "increase" | "decrease";
   icon: LucideIcon;
 }
@@ -1017,14 +1020,21 @@ interface SalesBrandRow {
   ordersCount: number;
 }
 
-type SalesRow = SalesProductRow | SalesCategoryRow | SalesBrandRow;
+type SalesRow =
+  | SalesProductRow
+  | SalesCategoryRow
+  | SalesBrandRow;
 
 type ReportType =
+  | "financial"
   | "sales"
   | "products"
   | "categories"
-  | "brands"
-  | "financial";
+  | "brands";
+
+/* =========================================================
+   HELPERS
+========================================================= */
 
 const formatDateInput = (date: Date) => {
   return date.toISOString().slice(0, 10);
@@ -1038,7 +1048,11 @@ const buildRecentReportPeriods = (): ReportPeriod[] => {
   const now = new Date();
 
   return Array.from({ length: 6 }, (_, index) => {
-    const baseDate = new Date(now.getFullYear(), now.getMonth() - index, 1);
+    const baseDate = new Date(
+      now.getFullYear(),
+      now.getMonth() - index,
+      1,
+    );
 
     const startDate = new Date(
       baseDate.getFullYear(),
@@ -1066,47 +1080,78 @@ const buildRecentReportPeriods = (): ReportPeriod[] => {
 
 const reportPeriods = buildRecentReportPeriods();
 
+/* =========================================================
+   COMPONENT
+========================================================= */
+
 export default function ReportsPage() {
   const { user, canAccessAllBranches } = useAuth();
 
+  /* ======================================================
+     STATE
+  ====================================================== */
+
   const [loading, setLoading] = useState(false);
 
-  const [selectedPeriod, setSelectedPeriod] = useState("1");
-  const [selectedDate, setSelectedDate] = useState("");
+  const [reportType, setReportType] =
+    useState<ReportType>("financial");
 
-  const [reportType, setReportType] = useState<ReportType>("financial");
+  const [selectedPeriod, setSelectedPeriod] =
+    useState("1");
 
-  const [selectedBranchId, setSelectedBranchId] = useState<string>("all");
+  const [selectedDate, setSelectedDate] =
+    useState("");
 
-  const [branches, setBranches] = useState<BranchOption[]>([]);
+  const [selectedBranchId, setSelectedBranchId] =
+    useState<string>("all");
+
+  const [branches, setBranches] = useState<
+    BranchOption[]
+  >([]);
 
   const [financeReport, setFinanceReport] =
     useState<FinanceReport | null>(null);
 
-  const [cashMovements, setCashMovements] = useState<
-    CashMovementReport[]
+  const [cashMovements, setCashMovements] =
+    useState<CashMovementReport[]>([]);
+
+  const [salesData, setSalesData] = useState<
+    SalesRow[]
   >([]);
 
-  const [salesData, setSalesData] = useState<SalesRow[]>([]);
+  /* ======================================================
+     AUTH
+  ====================================================== */
 
-  const activeBranchId = user?.activeBranchId || user?.branchId;
+  const activeBranchId =
+    user?.activeBranchId || user?.branchId;
 
   const canViewReports =
     user?.role === "root" ||
     user?.role === "gerente_general" ||
     user?.role === "gerente_sucursal";
 
+  /* ======================================================
+     PERIOD
+  ====================================================== */
+
   const selectedPeriodData = useMemo(() => {
     return (
-      reportPeriods.find((period) => period.id === selectedPeriod) ||
-      reportPeriods[0]
+      reportPeriods.find(
+        (period) => period.id === selectedPeriod,
+      ) || reportPeriods[0]
     );
   }, [selectedPeriod]);
 
+  /* ======================================================
+     BRANCH LABELS
+  ====================================================== */
+
   const activeBranchName = useMemo(() => {
     return (
-      branches.find((branch) => branch.id === activeBranchId)?.name ||
-      "Sucursal activa"
+      branches.find(
+        (branch) => branch.id === activeBranchId,
+      )?.name || "Sucursal activa"
     );
   }, [branches, activeBranchId]);
 
@@ -1116,12 +1161,21 @@ export default function ReportsPage() {
     }
 
     return (
-      branches.find((branch) => branch.id === selectedBranchId)?.name ||
-      activeBranchName
+      branches.find(
+        (branch) => branch.id === selectedBranchId,
+      )?.name || activeBranchName
     );
-  }, [branches, selectedBranchId, activeBranchName]);
+  }, [
+    branches,
+    selectedBranchId,
+    activeBranchName,
+  ]);
 
-  const currentFilters = useMemo(() => {
+  /* ======================================================
+     FILTERS
+  ====================================================== */
+
+  const filters = useMemo(() => {
     const branchId = canAccessAllBranches()
       ? selectedBranchId !== "all"
         ? selectedBranchId
@@ -1144,10 +1198,14 @@ export default function ReportsPage() {
   }, [
     selectedDate,
     selectedPeriodData,
-    canAccessAllBranches,
     selectedBranchId,
     activeBranchId,
+    canAccessAllBranches,
   ]);
+
+  /* ======================================================
+     LOAD BRANCHES
+  ====================================================== */
 
   useEffect(() => {
     const loadBranches = async () => {
@@ -1161,7 +1219,9 @@ export default function ReportsPage() {
         const normalized = Array.isArray(response)
           ? response
               .filter(
-                (branch): branch is BranchOption =>
+                (
+                  branch,
+                ): branch is BranchOption =>
                   typeof branch?.id === "string" &&
                   typeof branch?.name === "string",
               )
@@ -1173,7 +1233,11 @@ export default function ReportsPage() {
 
         setBranches(normalized);
       } catch (error) {
-        console.error("Error cargando sucursales", error);
+        console.error(
+          "Error cargando sucursales",
+          error,
+        );
+
         setBranches([]);
       }
     };
@@ -1181,23 +1245,30 @@ export default function ReportsPage() {
     loadBranches();
   }, [canAccessAllBranches]);
 
+  /* ======================================================
+     LOAD REPORTS
+  ====================================================== */
+
   useEffect(() => {
     const loadReports = async () => {
       setLoading(true);
 
       try {
-        const [financeData, movementsData] = await Promise.all([
-          selectedDate
-            ? reportsAPI.getDailySummary(selectedDate, currentFilters.branchId)
-            : reportsAPI.getFinanceReport(currentFilters),
+        const [
+          financeData,
+          movementsData,
+        ] = await Promise.all([
+          reportsAPI.getFinanceReport(filters),
 
-          reportsAPI.getCashMovements(currentFilters),
+          reportsAPI.getCashMovements(filters),
         ]);
 
         setFinanceReport(financeData || null);
 
         setCashMovements(
-          Array.isArray(movementsData) ? movementsData : [],
+          Array.isArray(movementsData)
+            ? movementsData
+            : [],
         );
 
         if (reportType === "financial") {
@@ -1210,21 +1281,36 @@ export default function ReportsPage() {
         switch (reportType) {
           case "sales":
           case "products":
-            response = await reportsAPI.getSalesByProducts(currentFilters);
+            response =
+              await reportsAPI.getSalesByProducts(
+                filters,
+              );
             break;
 
           case "categories":
-            response = await reportsAPI.getSalesByCategories(currentFilters);
+            response =
+              await reportsAPI.getSalesByCategories(
+                filters,
+              );
             break;
 
           case "brands":
-            response = await reportsAPI.getSalesByBrands(currentFilters);
+            response =
+              await reportsAPI.getSalesByBrands(
+                filters,
+              );
             break;
         }
 
-        setSalesData(Array.isArray(response) ? response : []);
+        setSalesData(
+          Array.isArray(response) ? response : [],
+        );
       } catch (error) {
-        console.error("Error cargando reportes", error);
+        console.error(
+          "Error cargando reportes",
+          error,
+        );
+
         setFinanceReport(null);
         setCashMovements([]);
         setSalesData([]);
@@ -1234,77 +1320,126 @@ export default function ReportsPage() {
     };
 
     loadReports();
-  }, [currentFilters, reportType, selectedDate]);
+  }, [filters, reportType]);
 
-  const reportSummaries: ReportSummary[] = useMemo(() => {
-    const totalIncome = Number(financeReport?.totalIncome || 0);
-    const totalExpense = Number(financeReport?.totalExpense || 0);
-    const balance = Number(financeReport?.balance || 0);
+  /* ======================================================
+     SUMMARY
+  ====================================================== */
 
-    return [
-      {
-        title: "Ingresos",
-        value: formatCurrency(totalIncome),
-        change: 0,
-        changeType: "increase",
-        icon: DollarSign,
-      },
-      {
-        title: "Egresos",
-        value: formatCurrency(totalExpense),
-        change: 0,
-        changeType: "decrease",
-        icon: TrendingDown,
-      },
-      {
-        title: "Balance",
-        value: formatCurrency(balance),
-        change: 0,
-        changeType: balance >= 0 ? "increase" : "decrease",
-        icon: TrendingUp,
-      },
-      {
-        title: "Movimientos",
-        value: String(cashMovements.length),
-        change: 0,
-        changeType: "increase",
-        icon: FileText,
-      },
-    ];
-  }, [financeReport, cashMovements]);
+  const reportSummaries: ReportSummary[] =
+    useMemo(() => {
+      const totalIncome = Number(
+        financeReport?.totalIncome || 0,
+      );
 
-  const productRows = salesData as SalesProductRow[];
-  const categoryRows = salesData as SalesCategoryRow[];
-  const brandRows = salesData as SalesBrandRow[];
+      const totalExpense = Number(
+        financeReport?.totalExpense || 0,
+      );
 
-  const getChangeIcon = (changeType: "increase" | "decrease") => {
+      const balance = Number(
+        financeReport?.balance || 0,
+      );
+
+      return [
+        {
+          title: "Ingresos",
+          value: formatCurrency(totalIncome),
+          changeType: "increase",
+          icon: DollarSign,
+        },
+        {
+          title: "Egresos",
+          value: formatCurrency(totalExpense),
+          changeType: "decrease",
+          icon: TrendingDown,
+        },
+        {
+          title: "Balance",
+          value: formatCurrency(balance),
+          changeType:
+            balance >= 0
+              ? "increase"
+              : "decrease",
+          icon: TrendingUp,
+        },
+        {
+          title: "Movimientos",
+          value: String(cashMovements.length),
+          changeType: "increase",
+          icon: FileText,
+        },
+      ];
+    }, [financeReport, cashMovements]);
+
+  /* ======================================================
+     SALES CASTS
+  ====================================================== */
+
+  const productRows =
+    salesData as SalesProductRow[];
+
+  const categoryRows =
+    salesData as SalesCategoryRow[];
+
+  const brandRows =
+    salesData as SalesBrandRow[];
+
+  /* ======================================================
+     UI HELPERS
+  ====================================================== */
+
+  const getChangeIcon = (
+    changeType: "increase" | "decrease",
+  ) => {
     return changeType === "increase"
       ? ArrowUpRight
       : ArrowDownRight;
   };
 
-  const getChangeColor = (changeType: "increase" | "decrease") => {
+  const getChangeColor = (
+    changeType: "increase" | "decrease",
+  ) => {
     return changeType === "increase"
       ? "text-green-600"
       : "text-red-600";
   };
+
+  /* ======================================================
+     EXPORT CSV
+  ====================================================== */
 
   const handleExportCsv = () => {
     let rows: string[][] = [];
 
     if (reportType === "financial") {
       rows = [
-        ["Fecha", "Descripcion", "Tipo", "Monto"],
+        [
+          "Fecha",
+          "Descripcion",
+          "Tipo",
+          "Monto",
+        ],
+
         ...cashMovements.map((item) => [
-          new Date(item.createdAt).toLocaleDateString("es-AR"),
+          new Date(
+            item.createdAt,
+          ).toLocaleDateString("es-AR"),
+
           item.description,
-          item.type === "income" ? "Ingreso" : "Egreso",
+
+          item.type === "income"
+            ? "Ingreso"
+            : "Egreso",
+
           String(item.amount),
         ]),
       ];
     }
 
-    if (reportType === "products" || reportType === "sales") {
+    if (
+      reportType === "sales" ||
+      reportType === "products"
+    ) {
       rows = [
         [
           "Producto",
@@ -1314,6 +1449,7 @@ export default function ReportsPage() {
           "Unidades",
           "Ingresos",
         ],
+
         ...productRows.map((item) => [
           item.productName,
           item.productSku || "-",
@@ -1327,7 +1463,13 @@ export default function ReportsPage() {
 
     if (reportType === "categories") {
       rows = [
-        ["Categoria", "Unidades", "Ingresos", "Pedidos"],
+        [
+          "Categoria",
+          "Unidades",
+          "Ingresos",
+          "Pedidos",
+        ],
+
         ...categoryRows.map((item) => [
           item.categoryName,
           String(item.totalUnits),
@@ -1339,7 +1481,13 @@ export default function ReportsPage() {
 
     if (reportType === "brands") {
       rows = [
-        ["Marca", "Unidades", "Ingresos", "Pedidos"],
+        [
+          "Marca",
+          "Unidades",
+          "Ingresos",
+          "Pedidos",
+        ],
+
         ...brandRows.map((item) => [
           item.brandName,
           String(item.totalUnits),
@@ -1350,25 +1498,38 @@ export default function ReportsPage() {
     }
 
     if (rows.length <= 1) {
-      window.alert("No hay datos para exportar");
+      window.alert(
+        "No hay datos para exportar",
+      );
+
       return;
     }
 
     const csv = rows
       .map((row) =>
         row
-          .map((cell) => `"${String(cell).replace(/"/g, '""')}"`)
+          .map((cell) =>
+            `"${String(cell).replace(
+              /"/g,
+              '""',
+            )}"`,
+          )
           .join(";"),
       )
       .join("\n");
 
-    const blob = new Blob([`\uFEFF${csv}`], {
-      type: "text/csv;charset=utf-8;",
-    });
+    const blob = new Blob(
+      [`\uFEFF${csv}`],
+      {
+        type: "text/csv;charset=utf-8;",
+      },
+    );
 
-    const url = window.URL.createObjectURL(blob);
+    const url =
+      window.URL.createObjectURL(blob);
 
-    const link = document.createElement("a");
+    const link =
+      document.createElement("a");
 
     link.href = url;
 
@@ -1383,6 +1544,10 @@ export default function ReportsPage() {
     window.URL.revokeObjectURL(url);
   };
 
+  /* ======================================================
+     PERMISSIONS
+  ====================================================== */
+
   if (!canViewReports) {
     return (
       <div className="p-4">
@@ -1392,33 +1557,41 @@ export default function ReportsPage() {
           </h1>
 
           <p className="mt-2 text-muted-foreground">
-            No tenés permisos para acceder a esta sección.
+            No tenés permisos para acceder
+            a esta sección.
           </p>
         </div>
       </div>
     );
   }
 
+  /* ======================================================
+     RENDER
+  ====================================================== */
+
   return (
     <div className="space-y-4 p-4 pb-24">
-      {/* HEADER */}
+      {/* ===================================================
+          HEADER
+      =================================================== */}
 
-      <div className="flex flex-col gap-4 rounded-2xl border border-border bg-card p-5">
-        <div>
-          <h1 className="text-2xl font-bold text-foreground sm:text-3xl">
-            Reportes y análisis
-          </h1>
+      <div className="rounded-2xl border border-border bg-card p-5">
+        <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+          <div>
+            <h1 className="text-2xl font-bold text-foreground sm:text-3xl">
+              Reportes y análisis
+            </h1>
 
-          <p className="mt-2 text-sm text-muted-foreground">
-            Panel unificado de métricas financieras y comerciales.
-          </p>
-        </div>
+            <p className="mt-2 text-sm text-muted-foreground">
+              Panel financiero y comercial
+              multisucursal.
+            </p>
+          </div>
 
-        <div className="flex flex-col gap-2 sm:flex-row">
           <Button
-            variant="outline"
-            className="w-full sm:w-auto"
             onClick={handleExportCsv}
+            className="w-full md:w-auto"
+            variant="outline"
           >
             <Download className="mr-2 h-4 w-4" />
             Exportar CSV
@@ -1426,17 +1599,25 @@ export default function ReportsPage() {
         </div>
       </div>
 
-      {/* FILTROS */}
+      {/* ===================================================
+          FILTERS
+      =================================================== */}
 
-      <div className="space-y-4 rounded-2xl border border-border bg-card p-4">
-        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+      <div className="rounded-2xl border border-border bg-card p-4">
+        <div className="mb-4 flex items-center gap-2 text-sm text-muted-foreground">
           <Building2 className="h-4 w-4" />
+
           <span>
-            Alcance actual: <strong>{selectedBranchLabel}</strong>
+            Alcance actual:{" "}
+            <strong>
+              {selectedBranchLabel}
+            </strong>
           </span>
         </div>
 
-        <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4">
+        <div className="grid grid-cols-1 gap-4 xl:grid-cols-4">
+          {/* PERIOD */}
+
           <div className="space-y-1">
             <label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
               Período
@@ -1446,31 +1627,61 @@ export default function ReportsPage() {
               value={selectedPeriod}
               disabled={Boolean(selectedDate)}
               onChange={(e) => {
-                setSelectedDate("");
-                setSelectedPeriod(e.target.value);
+                setSelectedPeriod(
+                  e.target.value,
+                );
               }}
-              className="h-11 w-full rounded-xl border border-border bg-background px-3 text-sm"
+              className="h-11 w-full rounded-xl border border-border bg-background px-3 text-sm disabled:opacity-50"
             >
               {reportPeriods.map((period) => (
-                <option key={period.id} value={period.id}>
+                <option
+                  key={period.id}
+                  value={period.id}
+                >
                   {period.name}
                 </option>
               ))}
             </select>
           </div>
 
+          {/* SINGLE DATE */}
+
           <div className="space-y-1">
             <label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
               Fecha puntual
             </label>
 
-            <input
-              type="date"
-              value={selectedDate}
-              onChange={(e) => setSelectedDate(e.target.value)}
-              className="h-11 w-full rounded-xl border border-border bg-background px-3 text-sm"
-            />
+            <div className="flex gap-2">
+              <div className="relative flex-1">
+                <CalendarDays className="absolute left-3 top-3.5 h-4 w-4 text-muted-foreground" />
+
+                <input
+                  type="date"
+                  value={selectedDate}
+                  onChange={(e) =>
+                    setSelectedDate(
+                      e.target.value,
+                    )
+                  }
+                  className="h-11 w-full rounded-xl border border-border bg-background pl-10 pr-3 text-sm"
+                />
+              </div>
+
+              {selectedDate && (
+                <Button
+                  variant="outline"
+                  type="button"
+                  onClick={() =>
+                    setSelectedDate("")
+                  }
+                >
+                  Limpiar
+                </Button>
+              )}
+            </div>
           </div>
+
+          {/* BRANCH */}
 
           {canAccessAllBranches() && (
             <div className="space-y-1">
@@ -1480,19 +1691,30 @@ export default function ReportsPage() {
 
               <select
                 value={selectedBranchId}
-                onChange={(e) => setSelectedBranchId(e.target.value)}
+                onChange={(e) =>
+                  setSelectedBranchId(
+                    e.target.value,
+                  )
+                }
                 className="h-11 w-full rounded-xl border border-border bg-background px-3 text-sm"
               >
-                <option value="all">Todas las sucursales</option>
+                <option value="all">
+                  Todas las sucursales
+                </option>
 
                 {branches.map((branch) => (
-                  <option key={branch.id} value={branch.id}>
+                  <option
+                    key={branch.id}
+                    value={branch.id}
+                  >
                     {branch.name}
                   </option>
                 ))}
               </select>
             </div>
           )}
+
+          {/* REPORT TYPE */}
 
           <div className="space-y-1">
             <label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
@@ -1502,62 +1724,116 @@ export default function ReportsPage() {
             <select
               value={reportType}
               onChange={(e) =>
-                setReportType(e.target.value as ReportType)
+                setReportType(
+                  e.target
+                    .value as ReportType,
+                )
               }
               className="h-11 w-full rounded-xl border border-border bg-background px-3 text-sm"
             >
-              <option value="financial">Financiero</option>
-              <option value="sales">Ventas</option>
-              <option value="products">Productos</option>
-              <option value="categories">Categorías</option>
-              <option value="brands">Marcas</option>
+              <option value="financial">
+                Financiero
+              </option>
+
+              <option value="sales">
+                Ventas
+              </option>
+
+              <option value="products">
+                Productos
+              </option>
+
+              <option value="categories">
+                Categorías
+              </option>
+
+              <option value="brands">
+                Marcas
+              </option>
             </select>
           </div>
         </div>
+
+        {/* ACTIVE FILTER LABEL */}
+
+        <div className="mt-4 rounded-xl bg-muted/30 p-3 text-sm text-muted-foreground">
+          {selectedDate ? (
+            <>
+              Mostrando datos del día{" "}
+              <strong>{selectedDate}</strong>
+            </>
+          ) : (
+            <>
+              Mostrando período{" "}
+              <strong>
+                {selectedPeriodData.name}
+              </strong>{" "}
+              (
+              {
+                selectedPeriodData.startDate
+              }{" "}
+              →{" "}
+              {selectedPeriodData.endDate})
+            </>
+          )}
+        </div>
       </div>
 
-      {/* SUMMARY */}
+      {/* ===================================================
+          SUMMARY
+      =================================================== */}
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        {reportSummaries.map((summary, index) => {
-          const Icon = summary.icon;
-          const ChangeIcon = getChangeIcon(summary.changeType);
+        {reportSummaries.map(
+          (summary, index) => {
+            const Icon = summary.icon;
 
-          return (
-            <div
-              key={index}
-              className="rounded-2xl border border-border bg-card p-5"
-            >
-              <div className="flex items-start justify-between gap-4">
-                <div>
-                  <p className="text-sm text-muted-foreground">
-                    {summary.title}
-                  </p>
+            const ChangeIcon =
+              getChangeIcon(
+                summary.changeType,
+              );
 
-                  <p className="mt-2 text-2xl font-bold text-foreground">
-                    {summary.value}
-                  </p>
+            return (
+              <div
+                key={index}
+                className="rounded-2xl border border-border bg-card p-5"
+              >
+                <div className="flex items-start justify-between gap-4">
+                  <div>
+                    <p className="text-sm text-muted-foreground">
+                      {summary.title}
+                    </p>
 
-                  <div
-                    className={`mt-3 flex items-center text-xs ${getChangeColor(
-                      summary.changeType,
-                    )}`}
-                  >
-                    <ChangeIcon className="mr-1 h-4 w-4" />
-                    {loading ? "Actualizando" : "Período actual"}
+                    <p className="mt-2 text-2xl font-bold text-foreground">
+                      {summary.value}
+                    </p>
+
+                    <div
+                      className={`mt-3 flex items-center text-xs ${getChangeColor(
+                        summary.changeType,
+                      )}`}
+                    >
+                      <ChangeIcon className="mr-1 h-4 w-4" />
+
+                      {loading
+                        ? "Actualizando"
+                        : "Período actual"}
+                    </div>
+                  </div>
+
+                  <div className="rounded-xl bg-primary/10 p-3">
+                    <Icon className="h-5 w-5 text-primary" />
                   </div>
                 </div>
-
-                <div className="rounded-xl bg-primary/10 p-3">
-                  <Icon className="h-5 w-5 text-primary" />
-                </div>
               </div>
-            </div>
-          );
-        })}
+            );
+          },
+        )}
       </div>
 
-      {/* FINANCIAL */}
+      {/* ===================================================
+          FINANCIAL
+      =================================================== */}
 
       {reportType === "financial" && (
         <div className="rounded-2xl border border-border bg-card p-4">
@@ -1572,54 +1848,76 @@ export default function ReportsPage() {
           <div className="space-y-3">
             {cashMovements.length === 0 && (
               <div className="rounded-xl border border-dashed border-border p-8 text-center text-sm text-muted-foreground">
-                No hay movimientos financieros para este período.
+                No hay movimientos para
+                este período.
               </div>
             )}
 
-            {cashMovements.map((movement) => (
-              <div
-                key={movement.id}
-                className="rounded-xl border border-border bg-muted/20 p-4"
-              >
-                <div className="flex items-start justify-between gap-3">
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm font-medium text-foreground">
-                      {movement.description}
-                    </p>
+            {cashMovements.map(
+              (movement) => (
+                <div
+                  key={movement.id}
+                  className="rounded-xl border border-border bg-muted/20 p-4"
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-sm font-medium text-foreground">
+                        {
+                          movement.description
+                        }
+                      </p>
 
-                    <div className="mt-1 flex flex-wrap gap-2 text-xs text-muted-foreground">
-                      <span>
-                        {new Date(movement.createdAt).toLocaleDateString(
-                          "es-AR",
+                      <div className="mt-1 flex flex-wrap gap-2 text-xs text-muted-foreground">
+                        <span>
+                          {new Date(
+                            movement.createdAt,
+                          ).toLocaleDateString(
+                            "es-AR",
+                          )}
+                        </span>
+
+                        {movement.sellerName && (
+                          <span>
+                            •{" "}
+                            {
+                              movement.sellerName
+                            }
+                          </span>
                         )}
-                      </span>
+                      </div>
+                    </div>
 
-                      {movement.sellerName && (
-                        <span>• {movement.sellerName}</span>
+                    <div
+                      className={`text-sm font-bold ${
+                        movement.type ===
+                        "income"
+                          ? "text-green-600"
+                          : "text-red-600"
+                      }`}
+                    >
+                      {movement.type ===
+                      "income"
+                        ? "+"
+                        : "-"}
+
+                      {formatCurrency(
+                        movement.amount,
                       )}
                     </div>
                   </div>
-
-                  <div
-                    className={`text-sm font-bold ${
-                      movement.type === "income"
-                        ? "text-green-600"
-                        : "text-red-600"
-                    }`}
-                  >
-                    {movement.type === "income" ? "+" : "-"}
-                    {formatCurrency(movement.amount)}
-                  </div>
                 </div>
-              </div>
-            ))}
+              ),
+            )}
           </div>
         </div>
       )}
 
-      {/* PRODUCTS */}
+      {/* ===================================================
+          PRODUCTS / SALES
+      =================================================== */}
 
-      {(reportType === "sales" || reportType === "products") && (
+      {(reportType === "sales" ||
+        reportType === "products") && (
         <div className="rounded-2xl border border-border bg-card p-4">
           <div className="mb-4 flex items-center justify-between">
             <h2 className="text-lg font-semibold text-foreground">
@@ -1632,7 +1930,8 @@ export default function ReportsPage() {
           <div className="space-y-3">
             {productRows.length === 0 && (
               <div className="rounded-xl border border-dashed border-border p-8 text-center text-sm text-muted-foreground">
-                No hay ventas para este período.
+                No hay ventas para este
+                período.
               </div>
             )}
 
@@ -1648,14 +1947,25 @@ export default function ReportsPage() {
                     </p>
 
                     <div className="mt-1 flex flex-wrap gap-2 text-xs text-muted-foreground">
-                      <span>{item.productSku || "Sin SKU"}</span>
+                      <span>
+                        {item.productSku ||
+                          "Sin SKU"}
+                      </span>
 
                       {item.categoryName && (
-                        <span>• {item.categoryName}</span>
+                        <span>
+                          •{" "}
+                          {
+                            item.categoryName
+                          }
+                        </span>
                       )}
 
                       {item.brandName && (
-                        <span>• {item.brandName}</span>
+                        <span>
+                          •{" "}
+                          {item.brandName}
+                        </span>
                       )}
                     </div>
                   </div>
@@ -1666,7 +1976,9 @@ export default function ReportsPage() {
                     </p>
 
                     <p className="text-xs text-muted-foreground">
-                      {formatCurrency(item.totalRevenue)}
+                      {formatCurrency(
+                        item.totalRevenue,
+                      )}
                     </p>
                   </div>
                 </div>
@@ -1676,7 +1988,9 @@ export default function ReportsPage() {
         </div>
       )}
 
-      {/* CATEGORIES */}
+      {/* ===================================================
+          CATEGORIES
+      =================================================== */}
 
       {reportType === "categories" && (
         <div className="rounded-2xl border border-border bg-card p-4">
@@ -1715,7 +2029,9 @@ export default function ReportsPage() {
                     </span>
 
                     <span className="font-semibold">
-                      {formatCurrency(item.totalRevenue)}
+                      {formatCurrency(
+                        item.totalRevenue,
+                      )}
                     </span>
                   </div>
 
@@ -1731,17 +2047,13 @@ export default function ReportsPage() {
                 </div>
               </div>
             ))}
-
-            {categoryRows.length === 0 && (
-              <div className="col-span-full rounded-xl border border-dashed border-border p-8 text-center text-sm text-muted-foreground">
-                No hay datos de categorías para este período.
-              </div>
-            )}
           </div>
         </div>
       )}
 
-      {/* BRANDS */}
+      {/* ===================================================
+          BRANDS
+      =================================================== */}
 
       {reportType === "brands" && (
         <div className="rounded-2xl border border-border bg-card p-4">
@@ -1780,7 +2092,9 @@ export default function ReportsPage() {
                     </span>
 
                     <span className="font-semibold">
-                      {formatCurrency(item.totalRevenue)}
+                      {formatCurrency(
+                        item.totalRevenue,
+                      )}
                     </span>
                   </div>
 
@@ -1796,75 +2110,94 @@ export default function ReportsPage() {
                 </div>
               </div>
             ))}
-
-            {brandRows.length === 0 && (
-              <div className="col-span-full rounded-xl border border-dashed border-border p-8 text-center text-sm text-muted-foreground">
-                No hay datos de marcas para este período.
-              </div>
-            )}
           </div>
         </div>
       )}
 
-      {/* TABLA DETALLE */}
+      {/* ===================================================
+          DETAIL TABLE
+      =================================================== */}
 
-      <div className="rounded-2xl border border-border bg-card p-4">
-        <div className="mb-4 flex items-center justify-between">
-          <h2 className="text-lg font-semibold text-foreground">
-            Detalle
-          </h2>
+      {reportType === "financial" && (
+        <div className="rounded-2xl border border-border bg-card p-4">
+          <div className="mb-4 flex items-center justify-between">
+            <h2 className="text-lg font-semibold text-foreground">
+              Detalle
+            </h2>
 
-          <div className="flex gap-2">
-            <Button size="sm" variant="outline">
+            <Button
+              size="sm"
+              variant="outline"
+            >
               <Filter className="mr-2 h-4 w-4" />
               Filtrar
             </Button>
           </div>
-        </div>
 
-        <div className="overflow-x-auto">
-          <table className="min-w-full text-sm">
-            <thead>
-              <tr className="border-b border-border text-left text-muted-foreground">
-                <th className="p-3">Descripción</th>
-                <th className="p-3">Fecha</th>
-                <th className="p-3">Monto</th>
-              </tr>
-            </thead>
+          <div className="overflow-x-auto">
+            <table className="min-w-full text-sm">
+              <thead>
+                <tr className="border-b border-border text-left text-muted-foreground">
+                  <th className="p-3">
+                    Descripción
+                  </th>
 
-            <tbody>
-              {reportType === "financial" &&
-                cashMovements.map((movement) => (
-                  <tr
-                    key={movement.id}
-                    className="border-b border-border/50"
-                  >
-                    <td className="p-3 text-foreground">
-                      {movement.description}
-                    </td>
+                  <th className="p-3">
+                    Fecha
+                  </th>
 
-                    <td className="p-3 text-muted-foreground">
-                      {new Date(movement.createdAt).toLocaleDateString(
-                        "es-AR",
-                      )}
-                    </td>
+                  <th className="p-3">
+                    Monto
+                  </th>
+                </tr>
+              </thead>
 
-                    <td
-                      className={`p-3 font-semibold ${
-                        movement.type === "income"
-                          ? "text-green-600"
-                          : "text-red-600"
-                      }`}
+              <tbody>
+                {cashMovements.map(
+                  (movement) => (
+                    <tr
+                      key={movement.id}
+                      className="border-b border-border/50"
                     >
-                      {movement.type === "income" ? "+" : "-"}
-                      {formatCurrency(movement.amount)}
-                    </td>
-                  </tr>
-                ))}
-            </tbody>
-          </table>
+                      <td className="p-3 text-foreground">
+                        {
+                          movement.description
+                        }
+                      </td>
+
+                      <td className="p-3 text-muted-foreground">
+                        {new Date(
+                          movement.createdAt,
+                        ).toLocaleDateString(
+                          "es-AR",
+                        )}
+                      </td>
+
+                      <td
+                        className={`p-3 font-semibold ${
+                          movement.type ===
+                          "income"
+                            ? "text-green-600"
+                            : "text-red-600"
+                        }`}
+                      >
+                        {movement.type ===
+                        "income"
+                          ? "+"
+                          : "-"}
+
+                        {formatCurrency(
+                          movement.amount,
+                        )}
+                      </td>
+                    </tr>
+                  ),
+                )}
+              </tbody>
+            </table>
+          </div>
         </div>
-      </div>
+      )}
     </div>
   );
 }
