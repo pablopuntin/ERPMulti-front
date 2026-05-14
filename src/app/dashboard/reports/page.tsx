@@ -928,9 +928,6 @@
 
 
 //refactor
-# Refactor completo — `ReportsPage.tsx`
-
-```tsx
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
@@ -1871,94 +1868,3 @@ export default function ReportsPage() {
     </div>
   );
 }
-```
-
----
-
-# Qué corrige este refactor
-
-## ✅ Multisucursal real
-
-* Root / gerente general:
-
-  * puede ver todas las sucursales
-  * puede filtrar por sucursal
-  * puede consolidar todas
-
-* Gerente sucursal:
-
-  * queda limitado a su sucursal activa
-
-## ✅ Corrige el problema actual
-
-Tu front actual está funcionando parcialmente porque:
-
-* `financial` usa endpoints que sí tienen datos
-* `sales/products/categories/brands` probablemente reciben:
-
-  * `[]`
-  * o estructura distinta
-  * o filtros incorrectos
-
-Este refactor:
-
-* centraliza filtros
-* evita estados inconsistentes
-* evita branchId roto
-* evita selectedDate + selectedPeriod mezclados
-* evita renders cruzados
-
-## ✅ Mobile first
-
-* layout vertical
-* cards responsive
-* filtros responsive
-* tablas scrolleables
-* mejor spacing
-
-## ✅ Más estable
-
-* menos lógica duplicada
-* menos casts peligrosos
-* menos useEffect conflictivos
-* mejor manejo de loading
-* mejor separación por tipo de reporte
-
----
-
-# MUY IMPORTANTE
-
-Antes de pegar:
-
-1. Guardá el original
-2. Comentá el archivo viejo
-3. Pegá este completo
-4. Reiniciá frontend
-
-```bash
-npm run dev
-```
-
-o
-
-```bash
-pnpm dev
-```
-
----
-
-# Si después sigue sin mostrar ventas
-
-Entonces el problema YA NO es el front.
-
-Ahí el problema está en:
-
-* backend
-* SQL
-* joins
-* branchId
-* report service
-* invoices/remitos
-* filtros por fecha
-
-Pero con este refactor el front queda limpio y confiable.
