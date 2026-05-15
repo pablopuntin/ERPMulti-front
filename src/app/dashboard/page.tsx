@@ -57,7 +57,7 @@ export default function DashboardHome() {
             Panel de Administración
           </h1>
           <p className="text-muted-foreground mt-1">
-            Bienvenido a Electrotec - Gestión Integral de la sucursal activa
+            Bienvenido a **** - Gestión Integral de la sucursal activa
           </p>
         </div>
       </div>
