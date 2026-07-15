@@ -1,6 +1,8 @@
 import axios from 'axios';
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000/api';
+//const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000/api';
+// En tu AuthProvider.tsx local:
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'https://erpmulti-back.onrender.com/api';
 
 const getApiErrorMessage = (error: any) => {
   if (!axios.isAxiosError(error)) {
