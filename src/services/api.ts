@@ -39,7 +39,7 @@ const getApiErrorMessage = (error: any) => {
 };
 
 const api = axios.create({
-  baseURL: API_BASE_URL,
+  baseURL: API_BASE,
   timeout: 20000,
   withCredentials: true, // ⭐ Importante: enviar cookies automáticamente
   headers: {
