@@ -53,7 +53,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [loading, setLoading] = useState(true);
 
   //const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000/api';
-  const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'https://erpmulti-back.onrender.com/api'
+  const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'https://erpmulti-back.onrender.com/'
 
   useEffect(() => {
     const token = localStorage.getItem('token');
