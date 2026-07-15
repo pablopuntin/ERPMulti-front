@@ -43,7 +43,7 @@ export default function Home() {
           Bienvenido
         </h1>
         <p className="text-center text-sm text-muted-foreground mb-6">
-          Sistema de gestión • Electrotec
+          Sistema de gestión 
         </p>
 
         {/* Error Message */}
