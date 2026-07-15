@@ -52,7 +52,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
 
-  const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000/api';
+  //const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000/api';
+  const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'https://erpmulti-back.onrender.com/api'
 
   useEffect(() => {
     const token = localStorage.getItem('token');
@@ -82,7 +83,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const login = async (email: string, password: string) => {
     try {
-      const response = await fetch(`${API_BASE}/auth/login/api`, {
+      const response = await fetch(`${API_BASE}/auth/login`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
