@@ -86,8 +86,8 @@ export default function Home() {
         {/* Debug Info */}
         <div className="mt-4 text-xs text-muted-foreground text-center">
           <p className="font-semibold">Credenciales por defecto:</p>
-          <p>Email: superadmin@example.com</p>
-          <p>Password: SuperSecurePassword123!</p>
+          <p>Email: GerenteGeneral@email.com</p>
+          <p>Password: GerenteDemo12!</p>
           <p className="mt-2">Backend: {process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000/api"}</p>
         </div>
       </div>
