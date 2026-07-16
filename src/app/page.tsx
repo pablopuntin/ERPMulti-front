@@ -59,7 +59,7 @@ export default function Home() {
             name="email"
             type="email"
             placeholder="Email"
-            defaultValue="superadmin@example.com"
+            defaultValue="GerenteGeneral@email.com"
             className="bg-input text-foreground border-border"
             required
             disabled={loading}
@@ -68,7 +68,7 @@ export default function Home() {
             name="password"
             type="password"
             placeholder="Contraseña"
-            defaultValue="SuperSecurePassword123!"
+            defaultValue="GerenteDemo12!"
             className="bg-input text-foreground border-border"
             required
             disabled={loading}
